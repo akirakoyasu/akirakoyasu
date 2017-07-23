@@ -4,3 +4,11 @@
 # See: https://jekyllrb.com/docs/themes/#overriding-theme-defaults
 layout: home
 ---
+
+# About me
+
+# Research
+
+# Blog
+
+# Resources
