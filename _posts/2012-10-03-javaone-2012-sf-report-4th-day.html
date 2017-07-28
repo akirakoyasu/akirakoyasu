@@ -1,0 +1,52 @@
+---
+layout: post
+title: JavaOne 2012 San Francisco レポート（４日目）
+date: 2012-10-03 22:45:30.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- JavaOne
+- Program
+tags:
+- Java
+- JavaOne
+- JSF
+- JSON-P
+- San Francisco
+meta:
+  _edit_last: '1'
+  _aioseop_description: 2012年9月30日（金）から10月4日（木）までの５日間、米国サンフランシスコでJavaOneが開催されました。その第４日目の様子をレポートします。
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1500767567;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:702;}i:1;a:1:{s:2:"id";i:562;}i:2;a:1:{s:2:"id";i:593;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<h3>Java標準JSON APIがいよいよ登場</h3>
+<p>[caption id="attachment_684" align="alignleft" width="360"]<a href="http://www.akirakoyasu.net/2012/10/03/javaone-2012-sf-report-4th-day/javaone2012sf_06_taylor-street-cafe/"><img class=" wp-image-684  " title="Taylor Street Cafe" alt="Taylor Street Cafe" src="{{ site.baseurl }}/assets/javaone2012sf_06_taylor-street-cafe.png" width="360" height="480" /></a> 設営を完了して開催を待つ<br />Taylor Street Cafe[/caption]</p>
+<p>2012/10/03（水）：４日目になると、そろそろ疲れが出てきました。学生の頃は、毎日こんな生活をしていたんですね。今やとても信じられないです・・・。</p>
+<p>ところでヒルトンの脇、テイラーストリートにはTaylor Street Cafeが設置されていました。１日目のキーノート後には、ここでイベントも行われていましたが、疲労困憊だった私は早々に退散したのでした。<br />
+たまにDukeくんも登場し、空き時間などにはにぎわっていたようです。 <!--more--></p>
+<h3>JSR 353: Java API for JSON Processing</h3>
+<p>XMLを扱う標準APIにJAXP(Java API for XML Processing)があります。<br />
+それに対してJSR353は、JSONを扱う標準API、JSON-P(Java API for JSON Processing)を策定するものです。ちなみにこのJSR353のEG(Expert Group)には、日本から<a href="http://samuraism.jp/">山本裕介さん</a>が参加されています。</p>
+<p>JSON-Pは、JAXPと同様にStreaming APIとObject model APIから成り、パースや書き出しなどを行うことができます。なぜ今まで標準APIが無かったのか不思議なくらいですが、漸くそれが導入されるわけです。これでJSONを扱うプログラム同士の互換性が高まることと思います。</p>
+<p>現状でJSONを扱うライブラリと言えばJacksonが有名ですね。こういったデータ処理系のAPIは、とかく実装のパフォーマンス面で優劣の差がついてしまうことが多いものです。Jacksonのような高速なサードパーティのライブラリに負けないパフォーマンスを期待しています。</p>
+<p>なお、JSON-Pのリリースは、JavaEE7に合わせ2013年春になります。<br />
+そしてJAXBに対応するJSON-B(Java Architecture for JSON Binding)の策定も行われる予定であるとか。</p>
+<h3>What's New in JSF: A Complete Tour of JSF 2.2</h3>
+<p>今回のJSFのアップデートでは、HTML5を使い始めることを前提にしています。<br />
+今後もHTMLのバージョンアップ等、マークアップそのものの仕様が更新されることを視野に入れ、jsf:という接頭辞をつけた属性をJSFエンジンに解釈させることにし、それ以外の要素・属性はそのままレスポンスに反映されるようにします。</p>
+<p>また、新しく"Flow"の概念を取り入れます（私は使ったことがないですが、SpringにWeb Flowという機能があるそうです）。Webアプリケーションにあける一連の画面遷移、例えば会員登録機能であれば情報入力画面・確認画面・登録完了画面といった遷移を、１つの単位として扱うことができるようになります。</p>
+<p>こちらもJavaEE7に合わせて、2013年春のリリース予定です。</p>
+<div class="series javaone-report">
+<p>JavaOne 2012 San Francisco レポート</p>
+<ul>
+<li class="previous"><a title="JavaOne 2012 San Francisco レポート（３日目）" href="/2012/10/02/javaone-2012-sf-report-3rd-day/">前を見る »</a></li>
+<li class="next"><a title="JavaOne 2012 San Francisco レポート（５日目）" href="/2012/10/04/javaone-2012-sf-report-5th-day/">« 次を見る</a></li>
+</ul>
+</div>

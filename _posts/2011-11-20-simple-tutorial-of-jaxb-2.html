@@ -1,0 +1,207 @@
+---
+layout: post
+title: JAXBの簡単な解説（２）
+date: 2011-11-20 05:27:34.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- JAXBの簡単な解説
+- Program
+tags:
+- Java
+- JAXB
+- XML
+- XML Schema
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: |-
+    前回はまず使ってみるということで、単純なJavaオブジェクトからXMLへ変換する方法を解説しました。
+    今回は、XMLからJavaオブジェクトへ変換する方法と、また一歩進んでバインディングを制御するアノテーションについて解説します。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501270796;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:45;}i:1;a:1:{s:2:"id";i:79;}i:2;a:1:{s:2:"id";i:40;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p><a title="JAXBの簡単な解説（１）" href="http://www.akirakoyasu.net/2011/02/27/251/">前回</a>はまず使ってみるということで、単純なJavaオブジェクトからXMLへ変換する方法を解説しました。</p>
+<p>今回は、XMLからJavaオブジェクトへ変換する方法と、また一歩進んでバインディングを制御するアノテーションについて解説します。</p>
+<h3>XMLからJavaオブジェクトへの変換</h3>
+<p>データ構造としては前回と同じものを使いましょう。</p>
+<p><em>会社（従業員*）</em><br />
+<em> 従業員（名前，給料）</em></p>
+<p>これらを表すJavaクラスも前回と基本は同じなのですが、オブジェクトの中身を見たいのでtoString()を追加しています。<!--more--></p>
+<p>Campanyクラス</p>
+<pre>public class Company {
+	private List&lt;Employee&gt; employees;
+
+	public List&lt;Employee&gt; getEmployees() {
+		return employees;
+	}
+
+	public void setEmployees(List&lt;Employee&gt; employees) {
+		this.employees = employees;
+	}
+
+	@Override
+	public String toString() {
+		String str = "Company [n";
+		if (employees != null) {
+			for (Employee e : employees) {
+				str += " " + e + "n";
+			}
+		}
+		str += "]";
+		return str;
+	}
+}</pre>
+<p>Employeeクラス</p>
+<pre>public class Employee {
+	private String name;
+	private int salary;
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getSalary() {
+		return salary;
+	}
+
+	public void setSalary(int salary) {
+		this.salary = salary;
+	}
+
+	@Override
+	public String toString() {
+		return "Employee [name=" + name + ", salary=" + salary + "]";
+	}
+}</pre>
+<p>では、XMLをこのクラスのオブジェクトに変換するプログラムがどうなるか見てみましょう。実際的にはXMLをファイルから読み込むなどすると思いますが、この例ではその場で文字列を作っています。</p>
+<pre>public class Sample2 {
+
+	public static void main(String[] args) {
+		String xml = "&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;"
+				+ "&lt;company&gt;"
+				+ "    &lt;employees&gt;"
+				+ "        &lt;name&gt;taro&lt;/name&gt;"
+				+ "        &lt;salary&gt;1000&lt;/salary&gt;"
+				+ "    &lt;/employees&gt;"
+				+ "    &lt;employees&gt;"
+				+ "        &lt;name&gt;hanako&lt;/name&gt;"
+				+ "        &lt;salary&gt;800&lt;/salary&gt;"
+				+ "    &lt;/employees&gt;"
+				+ "&lt;/company&gt;";
+
+		// アンマーシャル
+		<span style="color: #ff0000;">Company c = JAXB.unmarshal(new StringReader(xml), Company.class);</span>
+
+		System.out.println(c);
+	}
+}</pre>
+<p>これも前回同様ごく簡単ですね。JAXB#unmarshall()を呼ぶだけです。</p>
+<p>実行すると以下の出力が得られます。</p>
+<pre class="output">Company [
+ Employee [name=taro, salary=1000]
+ Employee [name=hanako, salary=800]
+]</pre>
+<p>これで無事にXMLからJavaオブジェクトへ変換できました。</p>
+<h3>バインディングを制御する</h3>
+<p>さてこのように特に設定をしなくても、自動的にJavaオブジェクトとXMLとが（正確にはJavaクラスとXML Schemaとが）対応付けられて相互に変換できるわけですが、このままでは都合が悪いこともあります。</p>
+<p>前回も触れたように、XML上、従業員の要素名が「employee<strong>s</strong>」になっています。これはなぜかと言うとCompanyクラスのプロパティ名が「employees」だからです。もちろんプロパティ名を「employee」に変えれば要素名も変わるのですが、いつも都合良くプログラムを変えたり、XMLを変えたりできるとは限りません。</p>
+<p>そこで登場するのがアノテーションです。Companyクラスを以下のようにしてみましょう。</p>
+<pre>public class Company {
+	private List&lt;Employee&gt; employees;
+
+	<span style="color: #ff0000;">@XmlElementWrapper</span>
+	<span style="color: #ff0000;">@XmlElement(name="employee")</span>
+	public List&lt;Employee&gt; getEmployees() {
+		return employees;
+	}
+
+	public void setEmployees(List&lt;Employee&gt; employees) {
+		this.employees = employees;
+	}
+
+	@Override
+	public String toString() {
+		String str = "Company [n";
+		if (employees != null) {
+			for (Employee e : employees) {
+				str += " " + e + "n";
+			}
+		}
+		str += "]";
+		return str;
+	}
+}</pre>
+<p>名前からだいたい想像がつくかもしれませんね。このクラスを使ってJavaオブジェクトからXMLへの変換（前回のSample1）を行ってみると、以下のような出力が得られます。</p>
+<pre class="output">&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;
+&lt;company&gt;
+    &lt;employees&gt;
+        &lt;employee&gt;
+            &lt;name&gt;taro&lt;/name&gt;
+            &lt;salary&gt;1000&lt;/salary&gt;
+        &lt;/employee&gt;
+        &lt;employee&gt;
+            &lt;name&gt;hanako&lt;/name&gt;
+            &lt;salary&gt;800&lt;/salary&gt;
+        &lt;/employee&gt;
+    &lt;/employees&gt;
+&lt;/company&gt;</pre>
+<p>つまりそれぞれのアノテーションは以下のような働きをします。</p>
+<dl>
+<dt>@XmlElementWrapper</dt>
+<dd>（主にコレクション要素の）外側をラップするXML要素を生成します。</dd>
+<dt>@XmlElement</dt>
+<dd>JavaBeanプロパティをXML要素としてマークします。nameプロパティでXML要素名を指定できます。</dd>
+</dl>
+<p>Employeeクラスの方も少し変えてみましょう。せっかくXMLなのですから属性を使いたいときもあるでしょう。</p>
+<pre>public class Employee {
+	private String name;
+	private int salary;
+
+	<span style="color: #ff0000;">@XmlAttribute</span>
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	<span style="color: #ff0000;">@XmlAttribute</span>
+	public int getSalary() {
+		return salary;
+	}
+
+	public void setSalary(int salary) {
+		this.salary = salary;
+	}
+
+	@Override
+	public String toString() {
+		return "Employee [name=" + name + ", salary=" + salary + "]";
+	}
+}</pre>
+<p>これで再び変換を実行すると、出力は以下のように変わります。</p>
+<pre>&lt;company&gt;
+    &lt;employees&gt;
+        &lt;employee salary="1000" name="taro"/&gt;
+        &lt;employee salary="800" name="hanako"/&gt;
+    &lt;/employees&gt;
+&lt;/company&gt;</pre>
+<dl>
+<dt>@XmlAttribute</dt>
+<dd>JavaBeanプロパティをXML属性としてマークします。</dd>
+</dl>
+<h3>次回へ</h3>
+<p>ここまでで、JavaオブジェクトとXMLとの間をかなり自由に行き来できるようになりました。</p>
+<p>次回は先延ばしにしていたXML Schemaが登場する予定です。JAXBのコマンド（CLI）を使ってJavaクラスとXML Schemaの変換を行います。</p>

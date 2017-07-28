@@ -1,0 +1,79 @@
+---
+layout: post
+title: Guavaのススメ
+date: 2011-01-15 16:13:10.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Google
+- Google code
+- Guava
+- Java
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: |-
+    Guava: Google Core Libraries for Java 1.5+
+    GoogleのJavaユーティリティライブラリで、Apache Commons の Lang、Collectionsなどに替わる機能を提供してくれるものです。コンパクトながら、かゆいところに手が届く良質なAPIになっていると思います。
+    いくつかの機能を紹介します。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501253064;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:378;}i:1;a:1:{s:2:"id";i:683;}i:2;a:1:{s:2:"id";i:759;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<h3>Guava: Google Core Libraries for Java 1.5+</h3>
+<p>GoogleのJavaユーティリティライブラリで、Apache Commons の Lang、Collectionsなどに替わる機能を提供してくれるものです。コンパクトながら、かゆいところに手が届く良質なAPIになっていると思います。</p>
+<p>いくつかの機能を紹介します。</p>
+<h4>コレクションの全ての要素を変換したい</h4>
+<p>List&lt;A&gt;を基にしてList&lt;B&gt;を作るとします。</p>
+<p>ライブラリを使わない場合はこんな感じになるでしょう。</p>
+<pre>List&lt;B&gt; blist = new ArrayList&lt;B&gt;(alist.size());
+for (A a : alist) {
+  blist.add(new B(a));
+}</pre>
+<p>Guavaを使う場合は次のように書きます。</p>
+<pre>List&lt;B&gt; blist = Lists.transform(alist, new Function&lt;A, B&gt;(){
+  @Override
+  public B apply(A a) {
+    return new B(a);
+  }
+});</pre>
+<p>おや？ どこかで見たような・・・。そう、Commons CollectionsのListUtilsと似ています。が、あちらはジェネリクスを使わないので、ダサいキャストが必要になります。</p>
+<p>このリスト変換の利点は、要素を使う時（リストから要素を取り出そうとした時）に初めて変換が行われるところにあります。<!--more--></p>
+<h4>キャメルケースとスネークケースの相互変換</h4>
+<p>ちなみにキャメルケースとは、単語の頭文字を大文字にして結合した文字列の形式（someString）、スネークケースとは、単語間をアンダースコアで結合した文字列の形式（some_string）です。</p>
+<p>例えばDBを扱うときに多いですね。Java内ではキャメルケース・DB内ではスネークケースを使ってる場合、変換が必要になることがありますが、自前で実装するのは結構大変で面倒です。こんな場面ではCaseFormatというenumを使います。</p>
+<p>キャメルケースからスネークケースへの変換</p>
+<pre>String str = LOWER_CAMEL.to(LOWER_UNDERSCORE, "someString");
+assert str == "some_string";</pre>
+<p>スネークケースからキャメルケースへの変換</p>
+<pre>String str = LOWER_UNDERSCORE.to(LOWER_CAMEL, "some_string");
+assert str == "someString";</pre>
+<h4>コレクションの文字列連結</h4>
+<p>Joinerというクラスを使います。</p>
+<pre>List&lt;String&gt; list = Arrays.asList("aaa", "bbb", "ccc");
+String str = Joiner.on(", ").join(list);
+assert str == "aaa, bbb, ccc";</pre>
+<h4>Maven</h4>
+<p>セントラルリポジトリに登録されていますので、Mavenからの使用も可能です。</p>
+<p>dependencyの記述は以下の通りです。（現時点での最新バージョンはr07）</p>
+<pre>&lt;dependency&gt;
+    &lt;groupId&gt;com.google.guava&lt;/groupId&gt;
+    &lt;artifactId&gt;guava&lt;/artifactId&gt;
+    &lt;version&gt;r07&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<h4>公式ドキュメント</h4>
+<p><a href="http://code.google.com/p/guava-libraries/" rel="nofollow" target="_blank">http://code.google.com/p/guava-libraries/</a></p>

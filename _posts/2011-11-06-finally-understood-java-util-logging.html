@@ -1,0 +1,174 @@
+---
+layout: post
+title: やっとわかった、java.util.logging
+date: 2011-11-06 03:00:00.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Java
+- logging
+meta:
+  _edit_last: '1'
+  _wp_old_slug: "%e3%82%84%e3%81%a3%e3%81%a8%e3%82%8f%e3%81%8b%e3%81%a3%e3%81%9f%e3%80%81java-util-logging"
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: ロギングと言えばlog4jですが、JavaSEにもロギングを扱うための標準APIがあります（1.4から）。それがjava.util.loggingです。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501249155;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:899;}i:1;a:1:{s:2:"id";i:797;}i:2;a:1:{s:2:"id";i:873;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>こんばんは。先日ブログの設定をいじっていたら、全てのページ（管理画面も！）でPHPエラーが表示されてかなり気落ちしました。PHPを書くのは久しぶりだったので、どこか書き間違えたんでしょう・・・。</p>
+<p>さて、今日はロギングの話をします。</p>
+<p>ロギングと言えばlog4jですが、JavaSEにもロギングを扱うための標準APIがあります（1.4から）。それがjava.util.loggingです。標準APIであるにも関わらず、なぜか情報が少ないんですね。簡単なプログラムを書こうとして、ついでだから標準API使ってみるか、と思い立つも、結局設定の仕方がわからずにlog4jに戻ったことが何度かありました。</p>
+<h3>まず使ってみる</h3>
+<p>まずは一番簡単な使い方から。</p>
+<pre>Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+logger.info("Loggerテストです。info");
+logger.severe("Loggerテストです。severe");</pre>
+<p>これだけです。このコードを実行すると、私のマシンでは以下の出力が得られます。</p>
+<pre class="output">2011/11/05 23:34:29 Sample1 main
+情報: Loggerテストです。info
+2011/11/05 23:34:29 Sample1 main
+致命的: Loggerテストです。severe</pre>
+<p>簡単ですね。<!--more--></p>
+<h3>標準出力に出力する</h3>
+<p>実際実行してみるとわかる通り、先ほどのコードでは、ログはエラー出力に出力されます。標準出力に出力するには、ハンドラを定義します。</p>
+<pre>Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+logger.addHandler(new StreamHandler(){
+    { setOutputStream(System.out); }
+});
+logger.setUseParentHandlers(false);
+
+logger.info("Loggerテスト2です。");</pre>
+<p>parentHandlerについては後で説明することにして、このコードを実行すると以下の出力が（標準出力に）得られます。</p>
+<pre class="output">2011/11/05 23:47:55 Sample2 main
+情報: Loggerテスト2です。</pre>
+<h3>ログレベルの変更</h3>
+<p>では更に出力されるログのレベルを変更してみましょう。「どうせsetLogLevel()だろう？」ほぼ正解です！ 以下、コードとその実行結果です。</p>
+<pre>Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+logger.addHandler(new StreamHandler(){
+  {
+    setOutputStream(System.out);
+    setLevel(Level.ALL);
+  }
+});
+logger.setUseParentHandlers(false);
+logger.setLevel(Level.ALL);
+
+logger.fine("Loggerテスト3です。fine");
+logger.info("Loggerテスト3です。info");
+logger.severe("Loggerテスト3です。severe");</pre>
+<pre class="output">2011/11/06 0:10:22 Sample3 main
+詳細レベル (低): Loggerテスト3です。fine
+2011/11/06 0:10:22 Sample3 main
+情報: Loggerテスト3です。info
+2011/11/06 0:10:22 Sample3 main
+致命的: Loggerテスト3です。severe</pre>
+<p>loggerとhandler、両方にレベルを設定していることに注意してください。</p>
+<h3>設定ファイルを使用する</h3>
+<p>loggerインスタンスを作成する度にコード内で設定を書くのはいかにも面倒です。log4jのように設定ファイルを使って設定したいものです。</p>
+<p>まずは、先ほど横着してインナークラスにしていた”標準出力へログ出力するハンドラ”を通常のクラスとして定義しておきます。</p>
+<p>sample.StdConsoleHandler</p>
+<pre>package sample;
+import java.util.logging.StreamHandler;
+
+public class StdConsoleHandler extends StreamHandler {
+  {
+    setOutputStream(System.out);
+  }
+}</pre>
+<p>次にログ設定ファイルを作成します。</p>
+<p>customLogging.properties</p>
+<pre>handlers= sample.StdConsoleHandler
+.level= ALL
+sample.StdConsoleHandler.level = ALL</pre>
+<p>最後にログ出力するためのコードです。</p>
+<pre>try {
+  LogManager.getLogManager().readConfiguration(
+        Sample4.class.getResourceAsStream("customLogging.properties"));
+} catch (SecurityException e) {
+  e.printStackTrace();
+} catch (IOException e) {
+  e.printStackTrace();
+}
+
+Logger logger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+
+logger.fine("Loggerテスト4です。fine");
+logger.info("Loggerテスト4です。info");
+logger.severe("Loggerテスト4です。severe");</pre>
+<p>ログ設定ファイルと実行コードを同じディレクトリに置いて実行してください。すると以下の出力が得られます。</p>
+<pre class="output">2011/11/06 0:47:32 Sample4 main
+詳細レベル (低): Loggerテスト4です。fine
+2011/11/06 0:47:32 Sample4 main
+情報: Loggerテスト4です。info
+2011/11/06 0:47:32 Sample4 main
+致命的: Loggerテスト4です。severe</pre>
+<h3>ロガーツリー</h3>
+<p>getLogger()をコールするときにロガーの名前を指定します。ここまでは簡易的に汎用ロガーを使用してきましたが、実際の開発では幾つものモジュールを開発するので、モジュール毎にログ設定をしたいことも多いでしょう。</p>
+<p>ロガーを使い分けるには、以下のようなコードにします。ロガーを３つ使ってみました。</p>
+<pre>try {
+  LogManager.getLogManager().readConfiguration(
+        Sample5.class.getResourceAsStream("customLogging.properties"));
+} catch (SecurityException e) {
+  e.printStackTrace();
+} catch (IOException e) {
+  e.printStackTrace();
+}
+
+Logger loggerX = Logger.getLogger("xxx");
+Logger loggerY = Logger.getLogger("xxx.yyy");
+Logger loggerZ = Logger.getLogger("xxx.zzz");
+
+loggerX.fine("LoggerXテスト5です。fine");
+loggerX.info("LoggerXテスト5です。info");
+loggerY.fine("LoggerYテスト5です。fine");
+loggerY.info("LoggerYテスト5です。info");
+loggerZ.fine("LoggerZテスト5です。fine");
+loggerZ.info("LoggerZテスト5です。info");</pre>
+<p>それから、先ほどのログ設定ファイルを以下のように書き換えましょう。</p>
+<pre># custom handler
+sample.StdConsoleHandler.level = ALL
+
+# custom logger
+xxx.handlers = sample.StdConsoleHandler
+xxx.level = INFO
+xxx.useParentHandlers = false
+
+xxx.zzz.level = ALL</pre>
+<p>コードを実行すると、以下の出力が得られます。</p>
+<pre class="output">2011/11/06 1:32:15 Sample5 main
+情報: LoggerXテスト5です。info
+2011/11/06 1:32:15 Sample5 main
+情報: LoggerYテスト5です。info
+2011/11/06 1:32:15 Sample5 main
+詳細レベル (低): LoggerZテスト5です。fine
+2011/11/06 1:32:15 Sample5 main
+情報: LoggerZテスト5です。info</pre>
+<p>お気づきでしょうか？ loggerZではfineのログまで出力されていますが、loggerX、loggerYではinfoまでしか出力されていません。</p>
+<p>これがロガーツリーです。Logger.getLogger("xxx")で取得したロガーは、Logger.getLogger("xxx.yyy")・Logger.getLogger("xxx.zzz")で取得したロガーの親ロガーになります。</p>
+<p>ここにはポイントが２つあります。</p>
+<ul>
+<li><strong>ログレベルを設定していないロガーのログレベルは、親ロガーのログレベルと同じになる。</strong></li>
+<li><strong>ロガーはデフォルトで、自身のハンドラと親ロガーのハンドラへログメッセージを発行する。</strong></li>
+</ul>
+<h3>デフォルトのログ設定ファイルとルートロガー</h3>
+<p>実はJREにはデフォルトのログ設定ファイルがあります。通常$JAVA_HOME/lib/logging.propertiesにありますので開いてみてください。".level"・"handlers"・"ConsoleHandler"・"FileHandler"などの設定がされているのがわかると思います。</p>
+<p>先ほど、"xxx"のロガーは"xxx.yyy"のロガーの親ロガーになると言いましたが、実際にはさらに<em>全ての（明示的な親ロガーを持たない）ロガーの親としてルートロガーなるものが存在</em>しています。そしてルートロガーのログレベルは設定ファイルの".level"、ハンドラは設定ファイルの"handlers"で決定されます。</p>
+<p>getLogger(Logger.GLOBAL_LOGGER_NAME)で取得できるロガーの親ロガーもルートロガーです。最初の例でエラー出力に出力されたのはルートロガーのハンドラがConsoleHandlerだったからなんですね。ただConsoleHandlerがなぜエラー出力を使う仕様になっているのかは謎です（笑）。少し不便ですよね。</p>
+<p>また、２番目以降の例でsetUseParentHandlers(false)を使用しているのは、ルートロガーのハンドラ（ConsoleHandler）へログメッセージを発行しないようにするためでした。</p>
+<h3>標準ロギングAPI java.util.logging</h3>
+<p>ここまでjava.util.loggingを見てきましたが、いかがでしょうか。log4jなどに慣れていると戸惑う部分もありますが、標準でついている機能を「わからないから使わない」のではもったいないと思います。違いを理解した上で使い分けたいものですね。</p>

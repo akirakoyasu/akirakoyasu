@@ -1,0 +1,61 @@
+---
+layout: post
+title: Javascriptで０パディング
+date: 2010-08-22 16:57:50.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Javascript
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: Javascriptで０パディングするときのスクリプトスニペット
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501263370;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:797;}i:1;a:1:{s:2:"id";i:341;}i:2;a:1:{s:2:"id";i:899;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>Javascriptで０パディングしたいことがあって、つい「Javascript format」で調べたのですが全然出てきませんでした。</p>
+<p>それも当然。formatなどという関数自体が存在しないんですね。</p>
+<p>とはいえ手動でやるなんて、とてもイヤな感じです。</p>
+<pre>var param = "1";
+while (param.length &lt; 5) {
+	param = "0" + param;
+}
+console.debug(param);</pre>
+<p><!--more-->「うーん、このループがすごく嫌。数を数えたりするのは嫌なんですよ」と思っていたところ、”Javascript ０パディング”で検索したら、こんなページが出てきました。</p>
+<p><a href="http://d.hatena.ne.jp/p4life/20070707/1183788390">JavaScript でゼロパディングするときは slice を使う</a></p>
+<p>この記事を参考に書くと以下のようになります。</p>
+<pre>var param = "1";
+param = ("00000" + param).slice(-5);
+console.debug(param);</pre>
+<p>先に足しておいて、あとで削るというわけ。これは素晴らしいですね！</p>
+<p>元の人はMSの仕様を参照してたので、標準はどうなんだろう、というところで<a href="http://www.ecma-international.org/publications/standards/Ecma-262.htm" rel="nofollow" target="_blank">ECMA-262</a>を見てみることにしました。</p>
+<blockquote><p><strong>15.5.4.13 String.prototype.slice (start, end)</strong></p>
+<p>The <strong>slice </strong>method takes two arguments, <em>start </em>and <em>end</em>, and returns a substring of the result of converting this object to a String, starting from character position <em>start </em>and running to, but not including, character position <em>end </em>(or through the end of the String if <em>end </em>is <strong>undefined</strong>). If <em>start </em>is negative, it is treated as <em>sourceLength</em>+<em>start</em>where <em>sourceLength </em>is the length of the String. If <em>end </em>is negative, it is treated as<em>sourceLength</em>+<em>end </em>where <em>sourceLength </em>is the length of the String. The result is a String value, not a String object. (© Ecma International 2009)</p></blockquote>
+<blockquote><p>sliceメソッドは２つの引数startとendを取り、このオブジェクトを文字列に変換した結果の文字列（対象文字列）の部分文字列を返す。部分文字列はstartの文字位置から始まり、endの文字位置（end自身は含まない）まで、あるいはendが与えられなかった場合は末尾までである。startが負数の場合、対象文字列長+startとして扱う。endが負数の場合、対象文字列長+endとして扱う。戻り値はStringオブジェクトではなく文字列値である。</p></blockquote>
+<p>対象文字列長＋引数というのがわかりにくいですが、要は「文字位置を後ろから数える」ということです。</p>
+<p>おや？ でもこれって普通に考えたらsubstringを使いたくなる機能なのではないでしょうか？ では一方その頃substringはどう定義されてるのかというと・・・</p>
+<blockquote><p><strong>15.5.4.15 String.prototype.substring (start, end)</strong></p>
+<p>The <strong>substring </strong>method takes two arguments, <em>start </em>and <em>end</em>, and returns a substring of the result of converting this object to a String, starting from character position<em>start </em>and running to, but not including, character position <em>end </em>of the String (or through the end of the String is <em>end </em>is <strong>undefined</strong>). The result is a String value, not a String object.</p>
+<p>If either argument is <strong>NaN </strong>or negative, it is replaced with zero; if either argument is larger than the length of the String, it is replaced with the length of the String.</p>
+<p>If <em>start </em>is larger than <em>end</em>, they are swapped. (© Ecma International 2009)</p></blockquote>
+<blockquote><p>substringメソッドは２つの引数startとendを取り、このオブジェクトを文字列に変換した結果の文字列（対象文字列）の部分文字列を返す。部分文字列はstartの文字位置から始まり、endの文字位置（end自身は含まない）まで、あるいはendが与えられなかった場合は末尾までである。戻り値はStringオブジェクトではなく文字列値である。</p>
+<p>引数はいずれも、非数あるいは負数の場合は０に、対象文字列長より大きい場合は対象文字列長に置き換えられる。</p>
+<p>startがendより大きい場合、両者は交換される。</p></blockquote>
+<p>出だしと結びはほとんど同じですね（笑）。</p>
+<p>普通の使い方をしてるときはどちらも同じ機能を果たしますが、負数になったり文字列長を超えたりすると挙動が違ってくるので要注意、といったところでしょうか。</p>
+<p>なんとなーく（偏見で）、sliceからはNetscape系、substringからはMS系のニオイがします。substringは置き換えちゃったり交換しちゃったりして勝手な印象・・・。</p>

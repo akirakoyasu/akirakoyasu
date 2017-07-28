@@ -1,0 +1,112 @@
+---
+layout: post
+title: 例外処理を考える（２）
+date: 2010-10-21 23:33:49.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+- 例外処理を考える
+tags:
+- Exception
+- Java
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: 前回はJavaの例外処理の仕組みについて簡単にまとめました。今回からは実際の例外の扱いについて具体的に考えていきたいと思います。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501252516;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:192;}i:1;a:1:{s:2:"id";i:873;}i:2;a:1:{s:2:"id";i:797;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p><a title="例外処理を考える（１）" href="http://www.akirakoyasu.net/2010/09/15/19/">前回</a>はJavaの例外処理の仕組みについて簡単にまとめました。今回からは実際の例外の扱いについて具体的に考えていきたいと思います。</p>
+<p>次の２つの場合を順に考えることにしましょう。</p>
+<ol>
+<li>例外に対処する</li>
+<li>例外を発生させる</li>
+</ol>
+<h3>例外に対処するときの考え方</h3>
+<h4>何に失敗したのか？</h4>
+<p>J2SEの標準APIを使っていても、スローされる例外に対処しなければならない機会はそれなりにあるものです。よくあるのはファイル入出力関連・ネットワーク関連・DB関連でしょう。いずれもJVMの外の世界とやりとりするため、予測不可能な事態が発生する可能性は高いと言えます。例外をスローするメソッドが多いのもうなずけます。</p>
+<p>「いや、NullPointerExceptionとかIndexOutOfBoundsExceptionをよく見るよ」という方、それはプログラミングエラーです。ご自身のコードをよく見直したほうがいいと思います・・・。</p>
+<p>ともあれ、具体的に見てみましょう。ローカルファイルからテキストを読み込んで出力する単純なプログラムを考えてみます。（対処方法はこれから考えていくので、とりあえず例外をキャッチしたらスタックトレースを出力するようにしました）<!--more--></p>
+<pre>public void read() {
+	File file = new File("sample.txt");
+	BufferedReader br = null;
+	try {
+		br = new BufferedReader(new InputStreamReader(
+				new FileInputStream(file), Charset.forName("UTF-8")));		// ---（１）
+
+		String line;
+		while ((line = br.readLine()) != null) {		// ---（２）
+			System.out.println(line);
+		}
+
+	} catch (FileNotFoundException e) {
+		e.printStackTrace();
+	} catch (IOException e) {
+		e.printStackTrace();
+	} finally {
+		if (br != null) {
+			try {
+				br.close();		// ---（３）
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}</pre>
+<p>あちこちで例外が発生するのでちょっと複雑に見えてしまいますが、「単純な」プログラムです。</p>
+<p>このコード中、例外がスローされる箇所は（１）〜（３）ですが、それぞれどんな場合にスローされるのかをJava API 仕様から確認してみると、</p>
+<p>（１）FileInputStream(File)は、ファイルが見つからないなど、ファイルをオープンできない場合にFileNotFoundExceptionをスローする。<br />
+（２）BufferedReader#readLine()は、何らかの入出力エラーが発生した場合にIOExceptionをスローする。<br />
+（３）BufferedReader#close()は、何らかの入出力エラーが発生した場合にIOExceptionをスローする。</p>
+<p>となっています。</p>
+<h4>回復可能か？</h4>
+<p>例外がスローされた場合に何が起きているのかがわかったら、次はその状態から回復することが可能かどうかを考えます。これもまた順番に考えていきましょう。</p>
+<p>（１）で例外が起きた場合、回復は不可能と考えられます。このプログラムでは、ローカルファイル ”sample.txt” が存在して、利用可能であることが前提になっていますね。その前提条件に反した状態から回復しようとすること自体に意味が無いでしょう。<br />
+（２）で例外が起きた場合、回復を試みてもよいかもしれません。ファイルからデータを読み込む途中でI/Oエラーが起きることは充分有り得ます。読み込みに失敗したなら、もう一度読み込んでみてもよいでしょう。<br />
+（３）で例外が起きることは極めて稀でしょう（単にリソースを解放するだけだから）。仮に例外が発生した場合には重篤なものと考えられます。よって、この状態から回復する必要はありません。</p>
+<p>これを反映したコードが以下になります。</p>
+<pre>public void read() {
+	File file = new File("sample.txt");
+	LineNumberReader lnr = null;
+	try {
+		lnr = new LineNumberReader(new InputStreamReader(
+				new FileInputStream(file), Charset.forName("UTF-8")));		// ---（１）
+
+		String line;
+		for (int i = 0; i &lt; 3; i++) {
+			try {
+				while ((line = lnr.readLine()) != null) {		// ---（２）
+					System.out.println(line);
+				}
+				break;
+			} catch (IOException e) {
+				System.err.println(lnr.getLineNumber() + 1
+						+ "行目の読み込みに失敗しました。");
+				e.printStackTrace();
+			}
+		}
+	} catch (FileNotFoundException e) {
+		System.err.println("ファイルのオープンに失敗しました。");
+		e.printStackTrace();
+	} finally {
+		if (lnr != null) {
+			try {
+				lnr.close();		// ---（３）
+			} catch (IOException e) {
+				System.err.println("ファイルのクローズに失敗しました。");
+				e.printStackTrace();
+			}
+		}
+	}
+}</pre>
+<p>行番号を管理するためにLineNumberReaderを使うことにし、（２）での例外対処については、2回リトライしてみて、ダメならあきらめることにしました。try〜catch節が内側に１つ増えていることに注意してください。</p>
+<h3>次回へ</h3>
+<p>このようにして、例外を処理する場合には「何に失敗したのか」「そこからの回復は可能か」を考えていきます。</p>
+<p>次回は例外を発生させるときのことを考えてみましょう。</p>

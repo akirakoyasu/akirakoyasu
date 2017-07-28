@@ -1,0 +1,62 @@
+---
+layout: page
+title: 's3tools: Amazon S3 CLI'
+date: 2012-03-28 01:44:36.000000000 -05:00
+type: page
+published: true
+status: publish
+categories: []
+tags: []
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_keywords: Amazon S3,AWS,CLI,Java,s3tools
+  _aioseop_description: Amazon S3のCLI、s3toolsを公開します。s3toolsはJava上で動作するコマンドラインツールです。
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>s3toolsはJava上で動作するAmazon S3のためのCLIです。</p>
+<dl>
+<dt>機能</dt>
+<dd>List / Get / Put</dd>
+<dt>動作環境</dt>
+<dd>JavaSE6.0 以降</dd>
+<dt>ライセンス</dt>
+<dd>修正BSDライセンス(<a href="http://www.opensource.org/licenses/BSD-3-Clause">BSD 3-Clause License</a>)</dd>
+</dl>
+<h3>Download</h3>
+<p>These packages are distributed under the <a href="http://www.opensource.org/licenses/BSD-3-Clause">BSD 3-Clause License</a>.</p>
+<h4>Binary Packages</h4>
+<ul>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-dist.tar.bz2">s3tools-1.0.0-dist.tar.bz2</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-dist.tar.gz">s3tools-1.0.0-dist.tar.gz</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-dist.zip">s3tools-1.0.0-dist.zip</a></li>
+</ul>
+<h4>Source Packages (Maven Project)</h4>
+<ul>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-project.tar.bz2">s3tools-1.0.0-project.tar.bz2</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-project.tar.gz">s3tools-1.0.0-project.tar.gz</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/s3tools-1.0.0-project.zip">s3tools-1.0.0-project.zip</a></li>
+</ul>
+<h3>Usage</h3>
+<p>バイナリパッケージを解凍してできたディレクトリ内にあるbin/に$PATHを通してください。</p>
+<p>更に、環境変数 $S3TOOLS_ACCESSKEY_IDにAWSのアクセスキーID、$S3TOOLS_SECRET_ACCESSKEYにAWSのシークレットアクセスキーを設定しておきます。</p>
+<pre>$ s3-list s3://backetName/
+
+$ s3-get s3://backetName/key
+
+$ s3-put file s3://backetName/key</pre>
+<h3>Build</h3>
+<p>ソースパッケージはMavenプロジェクトになっています。パッケージを解凍してできたディレクトリへ移動して、</p>
+<pre>$ mvn package</pre>
+<p>でビルドできます。</p>
+<h3>GitHub</h3>
+<p>GitHubにリポジトリを置きました。</p>
+<p><a href="https://github.com/akirakoyasu/s3tools">https://github.com/akirakoyasu/s3tools</a></p>
+<pre>$ git clone git://github.com/akirakoyasu/s3tools.git</pre>
+<h3>Feedback</h3>
+<p>フィードバックはコメント欄・SNSなどで受け付けています。</p>

@@ -1,0 +1,51 @@
+---
+layout: post
+title: XMLDB Apache Xindice のコマンド
+date: 2010-09-30 17:43:43.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- Database
+tags:
+- Apache
+- Java
+- Xindice
+- XML
+- XMLDB
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: XMLDBの一つに、Apache Xindice（アパッチ ジンディーチェ）があります。ちょっと動きを試してみました。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1500179985;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:873;}i:1;a:1:{s:2:"id";i:742;}i:2;a:1:{s:2:"id";i:929;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>XMLDBの一つに、Apache Xindice（アパッチ ジンディーチェ）があります。ちょっと動きを試してみました。</p>
+<p>アプリケーション自体は、warをtomcatに放り込むだけで起動しました。</p>
+<p>で、コレクション（スキーマみたいなもの）を作ろうとしてコマンドを発行</p>
+<pre>$ xindice add_collection -c /db -n test
+
+trying to register database
+XMLDB Exception 0: Cannot communicate with the server: http://127.0.0.1:8888/xindice/</pre>
+<p>接続できません。っていうか、tomcatのリッスンポートは8888ではないのですが。</p>
+<p>どっかにconfigファイルでもあるのかと思って探したのですが見当たりません。</p>
+<p>スタンドアロンのサーバだったときのコマンドのまま更新してないのかな？？</p>
+<p>コマンドのUsageをいくら見ても、ホストとかポートの指定方法が書いてありませんので、「こりゃダメだ、Xindiceってイケてないプロジェクトだったのかなあ・・・」と思ってのですが、</p>
+<p><a href="http://wiki.apache.org/xindice/XindiceFAQ/XindicePort" target="_blank">Wiki: How to change Xindice Command Line tool port number?</a> に書いてありました。</p>
+<pre>$ xindice add_collection -c xmldb:xindice://localhost:8080/db -n test
+
+trying to register database
+Created : xmldb:xindice://localhost:8080/db/test</pre>
+<p>接続できました。-cオプションにはDSNを渡すということだったようですね。</p>

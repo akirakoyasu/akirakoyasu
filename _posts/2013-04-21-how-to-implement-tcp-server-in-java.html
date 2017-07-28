@@ -1,0 +1,109 @@
+---
+layout: post
+title: Javaで作るTCPサーバ（１）
+date: 2013-04-21 00:48:14.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- Javaで作るTCPサーバ
+- Program
+tags:
+- Java
+- ServerSocket
+- Socket
+- TCP
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _wpas_done_all: '1'
+  _aioseop_description: JavaでTCPサーバを実装する方法について紹介します。１回目の今回は、いわゆる”普通のソケットAPI” java.net.ServerSocket
+    を使用してエコーサーバを実装してみます。
+  _wp_old_slug: how-to-implement-socket-server-in-java
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501246498;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:683;}i:1;a:1:{s:2:"id";i:931;}i:2;a:1:{s:2:"id";i:378;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>このところ暖かい日が続いているなあと思っていたら、急に寒くなって喉の調子を悪くしました。</p>
+<p>ところで最近、なぜかSocketからサーバを作る必要があってコードを書いたので、自分の中の整理も含め、JavaでTCPサーバを実装する方法についてまとめたいと思います。</p>
+<h3>Javaでサーバソケットを扱う</h3>
+<p>Java SE 7において、サーバソケットを扱う方法は３つあります。</p>
+<ul>
+<li>まずはいわゆる普通のソケットAPIです。JDK1.0の時代からあるAPIで、（つまりこの旧き良きAPIは1996年から存在します） java.net.ServerSocket を使います。</li>
+<li>次に「ノンブロッキング」と呼ばれるモードで処理を行うAPIがあります。java.nio.channels パッケージにある、ServerSocketChannel と Selector を中心に使います。このAPIはJDK1.4で追加されました。</li>
+<li>そして最後に、非同期で処理を行う最も新しいAPIがあります。これも java.nio.channels パッケージにある、AsynchronousServerSocketChannel を中心に使います。このAPIはJDK1.7で追加されました。</li>
+</ul>
+<p><!--more--></p>
+<h3>java.net.ServerSocket を使う</h3>
+<p>最初は基本ということで、私が高校生だった頃には既に活躍していた、普通のソケットAPIを使ってエコーサーバを実装してみましょう。”普通のソケットAPI”と言っても、他のAPIでもソケットの扱い方が違うというだけで、扱うもの自体はあくまで”普通のソケット”には違いないのですが・・・。</p>
+<p>これはごくシンプルに書けますので、コードを先に記載します。</p>
+<pre>try (ServerSocket listener = new ServerSocket();) {
+    listener.setReuseAddress(true);
+    listener.<span style="color: #0000ff;">bind</span>(new InetSocketAddress(8080));
+    System.out.println("Server listening on port 8080...");
+    while (true) {
+        try (Socket socket = listener.<span style="color: #0000ff;">accept</span>();) {
+            InputStream from = socket.getInputStream();
+            OutputStream to = socket.getOutputStream();
+            Bytes.copy(from, to);
+        }
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}</pre>
+<p>順序としてはこうです。</p>
+<ol>
+<li>ServerSocketを作り、ポートにバインドする</li>
+<li>クライアントからの接続を待ち受け（つまりこの ServerSocket#accept() をコールした時点で、スレッドがブロックします）、接続があったらACCEPTしてSocketを得る</li>
+<li>Socketのストリームを使ってアレコレする</li>
+<li>Socketを閉じる</li>
+<li>以降繰り返し</li>
+</ol>
+<p>早速実行してみましょう。</p>
+<pre>$ java SocketServer
+Server listening on port 8080...</pre>
+<p>これでサーバが起動しました。別のターミナルを開いて接続してみます。</p>
+<pre>$ telnet localhost 8080
+Trying ::1...
+Connected to localhost.
+Escape character is '^]'.</pre>
+<p>接続できました。何か入力すれば、入力したものがそのまま出力されてくるはずです。Congratulations! ・・・ただ、このサーバには１つ大きな問題点があります。</p>
+<h3>スレッド化する</h3>
+<p>その問題点とは、複数のクライアントからの接続を同時に処理できないということです。ためしに複数のターミナルから接続してみると、１つのクライアントの接続を閉じてからでないと次のクライアントの処理がされないことがわかります。</p>
+<p>それというのも、先述のコードではSocketを１つずつしか処理していないからですね。従ってそこをスレッド化しましょう。</p>
+<pre>ExecutorService worker = Executors.newCachedThreadPool();
+try (ServerSocket listener = new ServerSocket();) {
+    listener.setReuseAddress(true);
+    listener.bind(new InetSocketAddress(8081));
+    System.out.println("Server listening on port 8081...");
+    while (true) {
+        final Socket socket = listener.accept();
+        worker.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    InputStream from = socket.getInputStream();
+                    OutputStream to = socket.getOutputStream();
+                    Bytes.copy(from, to);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        });
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+} finally {
+    worker.shutdown();
+}</pre>
+<p>これで複数の接続を同時に処理できる、極めて実用的なエコーサーバを手にすることができました。</p>
+<p>しかしちょっと待ってください、サーバソケットを扱う方法が他にも２つ、あったのでした。それらにはこの”普通のソケットAPI”にはない利点があります（同時に欠点もあるのですが）。次回は２つ目のAPIであるノンブロッキングAPIを使ってみることにしましょう。</p>

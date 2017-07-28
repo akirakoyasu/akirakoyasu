@@ -1,0 +1,46 @@
+---
+layout: post
+title: MapReduceで巨大データ同士をJOINする
+date: 2013-02-07 01:28:54.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Hadoop
+- MapReduce
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: MapReduceを使って、２つの巨大なデータをJOINするための方法を紹介します。
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501274934;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:929;}i:1;a:1:{s:2:"id";i:284;}i:2;a:1:{s:2:"id";i:899;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>立春をすぎて、暖かく感じる日も増えてきた今日この頃です。さて春といえばミツバチ、ミツバチといえばHiveですが、今日はHiveを使わないで純粋なMapReduceで、巨大データ同士をJOINするための一つの方法を書き留めたいと思います。</p>
+<h3>よくある問題</h3>
+<p>具体的に考えるために、状況を想定してみます。例えば以下の２つのテーブル、アクセスログ（日時，ユーザID，アクセスURL）とユーザマスタ（ユーザID，年齢，性別，住所）があるとします。これらのテーブルをユーザIDで結合したいとしましょう。</p>
+<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2013/02/07/how-to-join-huge-data-in-mapreduce/join-in-mapreduce-1/"><img class=" wp-image-877 aligncenter article" alt="join tables" src="{{ site.baseurl }}/assets/join-in-mapreduce-1.png" width="473" height="69" /></a></p>
+<p>SQLで言えば次のような処理ということになります。</p>
+<pre>SELECT *
+  FROM access_log
+  LEFT OUTER JOIN user
+  USING (user_id);</pre>
+<p>つまり何ということはない普通のJOINなのですが、この２つのデータがとても大きなものであるとき、私たちは問題に直面します。<!--more--></p>
+<h3>解</h3>
+<p>このようなとき、まず思い浮かぶのは<a title="Apache Hive" href="http://hive.apache.org">Hive</a>を使うことです。SQLに慣れているならば、極めて直感的に処理を書くことができます。（先述のSQLを書くだけです）</p>
+<p>ただしHiveを使わず、純粋な<a title="Apache Hadoop" href="http://hadoop.apache.org">MapReduce</a>を書いて処理したいこともあるでしょう。その場合次の図に示すような手順が考えられます。ここでは３つのMapReduceを使います。</p>
+<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2013/02/07/how-to-join-huge-data-in-mapreduce/join-in-mapreduce-2/"><img class=" wp-image-878 article aligncenter" alt="Join in MapReduce" src="{{ site.baseurl }}/assets/join-in-mapreduce-2.png" width="551" height="607" /></a></p>
+<ol>
+<li>まず１つ目のMapReduceは、アクセスログを入力とします。Mapperでレコードに含まれているユーザIDを取り出し、テーブル番号（０）と共にレコードの先頭に追加して出力します。Reducerは不要です。</li>
+<li>２つ目のMapReduceも、ユーザマスタを入力として１つ目と似た処理を行います。即ち、MapperでユーザマスタのレコードからユーザIDを取り出し、テーブル番号（１）と共にレコードの先頭に追加して出力します。これもやはりReducerは不要です。</li>
+<li>３つ目のMapReduceは、１つ目と２つ目の出力を入力として使用します。Mapperでは、入力をほぼそのまま、ユーザIDをキーとして出力します。Reducerでは、ユーザIDでグルーピングされたレコードを受け取り、先の処理で追加したテーブル番号０のレコードと、テーブル番号１のレコードとを繋ぎ合わせて出力します。</li>
+<li>これでアクセスログとユーザマスタの結合ができました。</li>
+</ol>
+<p>重要なことは、<strong>３つ目のMapReduceでレコードを識別するために、予め「テーブル番号」を追加しておく</strong>ということです。今回は０と１を使用していますが、テーブル一意であればもちろん番号でなくても構いません。</p>

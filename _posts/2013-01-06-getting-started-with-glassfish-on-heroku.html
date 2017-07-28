@@ -1,0 +1,126 @@
+---
+layout: post
+title: Getting Started with Glassfish on Heroku
+date: 2013-01-06 02:35:37.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Embedded Glassfish
+- Glassfish
+- Heroku
+- Java
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: Webアプリケーション環境を提供するHeroku上で、Embedded Glassfishを稼働させる方法を紹介します。
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501188267;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:759;}i:1;a:1:{s:2:"id";i:341;}i:2;a:1:{s:2:"id";i:217;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>新年明けましておめでとうございます。今年もよろしくお願いいたします。私は今回の年末年始のお休みの間、なるだけPCを開かないでおこうと心に決めていたのですが、前々から気になっていた<a href="http://www.heroku.com">Heroku</a>を少しだけ触ってみようかな、などど思い立ってしまいました。</p>
+<p>さて、HerokuにはJava・Ruby on Rails・Python/Djangoなど、いくつかのWebアプリケーション実行環境が用意されています。JavaのWebアプリケーションを実行するために、Herokuの公式ドキュメントではJettyを使用していますが、ここは<a href="http://glassfish.java.net">Glassfish</a>を動作させてみましょう。jarファイル１個で起動できるEmbedded Glassfishを使用します。</p>
+<h3>プロジェクトを作成してローカル環境で実行する</h3>
+<p>Mavenを使ってビルドを行いますので、まずはpom.xmlを作成します。packagingはwarとし、maven-war-pluginには以下のようにweb.xml不要の設定をします。</p>
+<pre>&lt;plugin&gt;
+    &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-war-plugin&lt;/artifactId&gt;
+    &lt;version&gt;2.3&lt;/version&gt;
+    &lt;configuration&gt;
+        &lt;failOnMissingWebXml&gt;false&lt;/failOnMissingWebXml&gt;
+    &lt;/configuration&gt;
+&lt;/plugin&gt;</pre>
+<p>さらに以下のdependencyを追加します。</p>
+<pre>&lt;dependency&gt;
+    &lt;groupId&gt;org.glassfish.main.extras&lt;/groupId&gt;
+    &lt;artifactId&gt;glassfish-embedded-all&lt;/artifactId&gt;
+    &lt;version&gt;3.1.2.2&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>次にGlassfishを起動するクラスを作成します。リッスンポートは環境変数から取得するように設定しています。<!--more--></p>
+<pre>public class Bootstrap {
+  public static void main(String[] args) {
+    try {
+      GlassFishProperties gfProps = new GlassFishProperties();
+      gfProps.setPort("http-listener",
+          Integer.parseInt(System.getenv("PORT")));
+      final GlassFish glassfish = GlassFishRuntime.bootstrap()
+          .newGlassFish(gfProps);
+      glassfish.start();
+
+      ScatteredArchive war = new ScatteredArchive("myApp",
+          ScatteredArchive.Type.WAR, new File("src/main/webapp"));
+      war.addClassPath(new File("target/classes"));
+      glassfish.getDeployer().deploy(war.toURI());
+
+      Runtime.getRuntime().addShutdownHook(new Thread(){
+        @Override
+        public void run() {
+          try {
+            System.out.println(glassfish + " shutdown now!!");
+            glassfish.dispose();
+          } catch (GlassFishException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+    } catch (GlassFishException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+}</pre>
+<p>続いて、基本ということでサーブレットを作成しましょう。</p>
+<pre>@WebServlet(name = "MyServlet", urlPatterns = "/MyServlet")
+public class MyServlet extends HttpServlet {
+  private static final long serialVersionUID = 1L;
+
+  @Override
+  protected void doGet(HttpServletRequest req,
+      HttpServletResponse resp)
+      throws ServletException, IOException {
+    PrintWriter out = resp.getWriter();
+    out.println("Hello, Embedded-Glassfish!!");
+  }
+
+  @Override
+  public void init() throws ServletException {
+    System.out.println("init: " + this);
+  }
+
+  @Override
+  public void destroy() {
+    System.out.println("destroy: " + this);
+  }
+}</pre>
+<p>一度ローカル環境でビルドして実行してみます。（クラスパス中、sample-projectの部分は適宜読み替えてください）</p>
+<pre>$ mvn clean package
+$ export PORT=18080
+$ java -cp "target/classes:target/sample-project/WEB-INF/lib/*" Bootstrap</pre>
+<p>うまく起動できたら、別のコンソールを開いてサーバの応答を確認します。</p>
+<pre>$ curl "http://localhost:18080/myApp/MyServlet"
+Hello, Embedded-Glassfish!!</pre>
+<h3>Heroku上で実行する</h3>
+<p>Herokuで稼働させるためには、もう１つファイルを追加する必要があります。プロジェクトのディレクトリ直下に"Procfile"という名前のテキストファイルを作成し、先ほどのjavaコマンドを記載します。</p>
+<pre>web:    java -cp target/classes:target/sample-project/WEB-INF/lib/* Bootstrap</pre>
+<p>また、これは必須ではありませんがJDKのバージョンを指定したいときには、これもプロジェクトのディレクトリ直下、"system.properties"ファイルに以下の内容を記載します。</p>
+<pre>java.runtime.version=1.7</pre>
+<p>これで設定はできました。後はGitにcommitし、Herokuアプリケーションとしてpushするだけです。</p>
+<pre>$ git init
+$ git add .
+$ git commit -m "init"
+$ heroku create
+$ git push heroku master</pre>
+<p>pushすると、Heroku側でビルドが行われてアプリケーションが起動します。起動に成功していれば、コンソールに"http://xxxx-yyyy-8888.herokuapp.com deployed to Heroku"といった表示がされていますので、そのURLにアクセスしてみましょう。</p>
+<pre>$ curl "http://xxxx-yyyy-8888.herokuapp.com/myApp/MyServlet"
+Hello, Embedded-Glassfish!!</pre>
+<p>うまく動作しました。続けて何かを試してみる場合は、commitとpushを繰り返していけばプロジェクトの再ビルドとアプリケーションの再起動が行われます。使い終わったらアプリケーションを破棄します。</p>
+<pre>$ heroku destroy xxxx-yyyy-8888</pre>
+<p>深くは突っ込んでいないのですが、EJBやCDI、JSFも試してみた限り問題無く動作するようです（JPAは未確認）。ただし、どの程度の規模のアプリケーションまで正常稼働するのかはわかりません。もともとHeroku自体が軽量なWebアプリケーションをスケールして稼働させるものなので、あまり大掛かりなアプリケーションは載せようとしない方が良いとは思います。</p>

@@ -1,0 +1,54 @@
+---
+layout: post
+title: ページ内アンカーでスムーズにスクロールする
+date: 2010-09-16 18:16:11.000000000 -05:00
+type: post
+published: true
+status: publish
+categories:
+- WebDesign
+tags:
+- Javascript
+- jQuery
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: jQueryを使って、ページ内アンカーをクリックしたときにスムーズに目標箇所までスクロールするためのスクリプト。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1500431373;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:378;}i:1;a:1:{s:2:"id";i:873;}i:2;a:1:{s:2:"id";i:6;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>jQueryを使って、ページ内アンカーをクリックしたときにスムーズに目標箇所までスクロールするためのスクリプト。</p>
+<p>僕はよくやるのですが、コードを書く前に、どういうことをすればいいのかを具体的に言葉で表現してみると、</p>
+<blockquote><p>Documentのロードが終わったときに、href属性が”#”で始まるアンカーを探し、クリックイベントとしてそのhref属性（からハッシュを除いた値）をidとして持つ要素のオフセットを取得して、そこまで滑らかにスクロールする処理を設定する。</p></blockquote>
+<p>となります。</p>
+<p>で、それをコードにしたのがこちら。</p>
+<pre>jQuery(function($){
+	$('a[href^="#"]').click(function(){
+		$('html, body').animate(
+			{ scrollTop : $($(this).attr('href')).offset().top }
+		);
+		return false;
+	});
+});</pre>
+<p>蛇足ながら解説します。</p>
+<dl>
+<dt>jQuery( callback($) )</dt>
+<dd>$(document).ready()の短縮形。コールバック関数の引数として$を与えるのが吉です。（$がコンフリクトするのを防ぎます）</dd>
+<dt>属性セレクタ [name ^= value]</dt>
+<dd>name属性の値がvalueで始まる要素を選択します。</dd>
+<dt>animate( properties, options )</dt>
+<dd>propertiesに指定されたstyleを、現在値から設定値まで滑らかに変化させます。optionsには変化量関数、アニメーション時間の指定などが可能です。今回はoptionsを指定していません。</dd>
+</dl>
+<p>アニメーションさせる要素をhtmlとbodyにしているのは、クロスブラウザのためです。（ここが一番重要だったり・・・）</p>

@@ -1,0 +1,69 @@
+---
+layout: page
+title: 'r53tools: Amazon Route 53 CLI'
+date: 2012-12-05 01:21:08.000000000 -06:00
+type: page
+published: true
+status: publish
+categories: []
+tags: []
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_keywords: Amazon Route 53,AWS,CLI,Java,r53tools
+  _aioseop_description: Amazon Route 53のCLI、r53toolsを公開します。r53toolsはJava上で動作するコマンドラインツールです。
+  _wpas_done_all: '1'
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>r53toolsはJava上で動作するAmazon Route 53のためのCLIです。</p>
+<dl>
+<dt>機能</dt>
+<dd>List zones / Create zone / List records / Create record / Delete record</dd>
+<dt>動作環境</dt>
+<dd>JavaSE6.0 以降</dd>
+<dt>ライセンス</dt>
+<dd>修正BSDライセンス(<a href="http://www.opensource.org/licenses/BSD-3-Clause">BSD 3-Clause License</a>)</dd>
+</dl>
+<h3>Download</h3>
+<p>These packages are distributed under the <a href="http://www.opensource.org/licenses/BSD-3-Clause">BSD 3-Clause License</a>.</p>
+<h4>Binary Packages</h4>
+<ul>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/r53tools/download/latest/r53tools-1.0.0-dist.tar.bz2">r53tools-1.0.0-dist.tar.bz2</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/r53tools-1.0.0-dist.tar.gz">r53tools-1.0.0-dist.tar.gz</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/r53tools-1.0.0-dist.zip">r53tools-1.0.0-dist.zip</a></li>
+</ul>
+<h4>Source Packages (Maven Project)</h4>
+<ul>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/r53tools-1.0.0-project.tar.bz2">r53tools-1.0.0-project.tar.bz2</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/r53tools-1.0.0-project.tar.gz">r53tools-1.0.0-project.tar.gz</a></li>
+<li><a href="http://public.akirakoyasu.s3.amazonaws.com/s3tools/download/latest/r53tools-1.0.0-project.zip">r53tools-1.0.0-project.zip</a></li>
+</ul>
+<h3>Usage</h3>
+<p>バイナリパッケージを解凍してできたディレクトリ内にあるbin/に$PATHを通してください。</p>
+<p>更に、環境変数 $R53TOOLS_ACCESSKEY_IDにAWSのアクセスキーID、$R53TOOLS_SECRET_ACCESSKEYにAWSのシークレットアクセスキーを設定しておきます。</p>
+<pre>
+$ r53-list-zone
+
+$ r53-create-zone domain.com
+
+$ r53-list-record domain.com.
+
+$ r53-create -d domain.com. -n www.domain.com -t A -l 86400 111.222.333.444
+
+$ r53-delete -d domain.com. -n www.domain.com -t A -l 86400 111.222.333.444
+</pre>
+<h3>Build</h3>
+<p>ソースパッケージはMavenプロジェクトになっています。パッケージを解凍してできたディレクトリへ移動して、</p>
+<pre>$ mvn package</pre>
+<p>でビルドできます。</p>
+<h3>GitHub</h3>
+<p>GitHubにリポジトリを置きました。</p>
+<p><a href="https://github.com/akirakoyasu/r53tools">https://github.com/akirakoyasu/r53tools</a></p>
+<pre>$ git clone git://github.com/akirakoyasu/r53tools.git</pre>
+<h3>Feedback</h3>
+<p>フィードバックはコメント欄・SNSなどで受け付けています。</p>

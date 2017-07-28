@@ -1,0 +1,181 @@
+---
+layout: post
+title: JAX-RSのリファレンス実装、Jerseyの使い方（２）
+date: 2011-11-07 00:31:46.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- JAX-RSのリファレンス実装、Jerseyの使い方
+- Program
+tags:
+- Java
+- JAX-RS
+- Jersey
+- REST
+meta:
+  _edit_last: '1'
+  _wp_old_slug: jax-rs%e3%81%ae%e3%83%aa%e3%83%95%e3%82%a1%e3%83%ac%e3%83%b3%e3%82%b9%e5%ae%9f%e8%a3%85%e3%80%81jersey%e3%81%ae%e4%bd%bf%e3%81%84%e6%96%b9%ef%bc%88%ef%bc%92%ef%bc%89
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: 前回は基本となるアノテーションを軸に、きわめて単純なRESTサービスを構築する手順を紹介しました。今回はやはりRESTといえばXML/JSONということで、XMLやJSONを返すサービスを構築しましょう。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501248611;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:32;}i:1;a:1:{s:2:"id";i:378;}i:2;a:1:{s:2:"id";i:759;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p><a title="JAX-RSのリファレンス実装、Jerseyの使い方（１）" href="http://www.akirakoyasu.net/2010/11/09/141/">前回</a>は基本となるアノテーションを軸に、きわめて単純なRESTサービスを構築する手順を紹介しました。今回はやはりRESTといえばXML/JSONということで、XMLやJSONを返すサービスを構築しましょう。</p>
+<p>（前回と言っても、ポストしたのがだいたい１年前の日付だということにたった今気づきました。）</p>
+<h3>XMLを返す</h3>
+<p>次のようなリソースクラスを作成します。</p>
+<p>jerseytest.resources.LocalDocumentResource</p>
+<pre>package jerseytest.resources;
+
+import java.io.IOException;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
+
+@Path("/indianTeas")
+public class LocalDocumentResource {
+	@GET
+	public Document getDocument() {
+		try {
+			File f = new File("/path/to/indianTeas.xml");
+			Document doc = DocumentBuilderFactory.newInstance()
+					.newDocumentBuilder().parse(f);
+			return doc;
+		} catch (SAXException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ParserConfigurationException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+}</pre>
+<p>少しコード量が増えたもののやっていることは単純で、ローカルにあるXMLファイルをDocumentオブジェクトにして返しているだけです。<!--more--></p>
+<p>ではサービスを参照してみましょう。</p>
+<pre>$ curl "http://localhost:8080/jerseytest/rest/indianTeas"
+
+&lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;
+&lt;teas&gt;
+	&lt;tea&gt;Assam&lt;/tea&gt;
+	&lt;tea&gt;Darjeeling&lt;/tea&gt;
+	&lt;tea&gt;Nilgiri&lt;/tea&gt;
+&lt;/teas&gt;</pre>
+<p>ちゃんとインドの紅茶リストが返ってきましたね。</p>
+<p>リソースクラスのメソッドがデフォルトで返すことのできる型は、Document以外にも</p>
+<ul>
+<li>javax.xml.transform.Source</li>
+<li>byte[]</li>
+<li>java.io.InputStream</li>
+<li>java.io.Reader</li>
+<li>java.io.File</li>
+<li>その他のJAXBオブジェクト</li>
+</ul>
+<div>などがあります。中でもJAXBオブジェクトを扱えることで、サービスの提供と利用がとても手軽になるのですが、その解説は次の機会に譲ります。</div>
+<h3>JSONを返す</h3>
+<p>XMLができたら、次はJSONを返してみたくなるのが人情というものです。</p>
+<p>JSONの文字列を自前で作って返すことも勿論出来るのですが、ここはjerseyが用意してくれている機能に頼りましょう。依存ライブラリが多いので（10個以上）ここはmavenを使用することをお勧めします。pom.xmlに以下の記述を追加します。</p>
+<pre>&lt;dependency&gt;
+    &lt;groupId&gt;com.sun.jersey&lt;/groupId&gt;
+    &lt;artifactId&gt;jersey-json&lt;/artifactId&gt;
+    &lt;version&gt;1.4&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>次に、MapをJSONで返すリソースクラスを作成してみます。</p>
+<p>jerseytest.resources.JsonResource</p>
+<pre>package jerseytest.resources;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+
+import org.codehaus.jettison.json.JSONObject;
+
+@Path("/json")
+public class JsonResource {
+	@GET
+	public JSONObject get() {
+		Map m = new HashMap();
+		m.put("name", "George");
+		m.put("age", "35");
+		m.put("gender", "male");
+		return new JSONObject(m);
+	}
+}</pre>
+<p>HashMapをJSONObjectでラップして返しているだけですね。ではサービスを参照してみましょう。</p>
+<pre>$ curl "http://localhost:8080/jerseytest/rest/json"
+
+{"age":"35","name":"George","gender":"male"}</pre>
+<p>確かにJSON形式のMapになって返ってきました。<br />
+Collectionも同様にJSONArrayでラップして返すことができます。</p>
+<h3>MediaType（MIMEタイプ）の指定</h3>
+<p>HTTPでは、”リクエスト側が要求するリソースの種類”と”レスポンス側が実際に返すリソースの種類”を表すためにMIMEタイプの指定が可能です。</p>
+<p>要求されたMIMEタイプに基づいてレスポンスの種類を変えるリソースクラスを作成してみましょう。</p>
+<p>jerseytest.resources.GeorgeResource</p>
+<pre>package jerseytest.resources;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+
+import org.codehaus.jettison.json.JSONObject;
+
+@Path("/george")
+public class GeorgeResource {
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public String name() {
+		return "I'm George";
+	}
+
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public JSONObject doc() {
+		Map m = new HashMap();
+		m.put("name", "George");
+		m.put("age", "35");
+		m.put("gender", "male");
+		return new JSONObject(m);
+	}
+}</pre>
+<p>新しいアノテーションが出てきました。</p>
+<dl>
+<dt>@Produces</dt>
+<dd>MIMEタイプでリソースの種類を示す。</dd>
+</dl>
+<p>ではそれぞれのMIMEタイプを指定して、サービスを参照してみましょう。<br />
+まずは"text/plain"からです。</p>
+<pre>$ curl -H "Accept: text/plain" "http://localhost:8080/jerseytest/rest/george"
+
+I'm George.</pre>
+<p>次に"application/json"です。</p>
+<pre>$ curl -H "Accept: application/json" "http://localhost:8080/jerseytest/rest/george"
+
+{"age":"35","name":"George","gender":"male"}</pre>
+<p>うまく行きました。親切なgeorgeサービスは、プレーンテキストを要求した場合は名前だけ、JSONを要求した場合は名前以外にも年齢と性別を教えてくれました。</p>
+<h3>次回へ</h3>
+<p>今回はXMLやJSONを返すサービスを構築する手順を紹介しました。これでかなりRESTっぽくなってきましたね。</p>
+<p>次回はJAXBオブジェクトの扱いと、余裕があればクライアント（サービスを利用する側）の実装手順を紹介しようと思います。</p>

@@ -1,0 +1,191 @@
+---
+layout: post
+title: 30分で実行するAmazon Elastic MapReduce（Amazon EMR）
+date: 2012-01-16 03:26:09.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- AWS
+- EMR
+- Hadoop
+- Java
+- MapReduce
+meta:
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _edit_last: '1'
+  _aioseop_description: 手軽にMapReduceを試せるAmazon Elastic MapReduce（Amazon EMR）。このAmazon
+    EMRを動かす方法を簡単にまとめました。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501263984;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:217;}i:1;a:1:{s:2:"id";i:759;}i:2;a:1:{s:2:"id";i:378;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>今年のテーマの一つはビッグデータということで、そろそろ本格的にMapReduceに手を出そうと思います。</p>
+<p>手軽にMapReduceを試してみるのであれば、やはりAWSでしょう。今回はAmazon Elastic MapReduce（Amazon EMR）を動かす方法を簡単にまとめておきます。</p>
+<p>実行する処理の例としては、Hadoopのチュートリアルにある処理をそのまま使わせてもらいましょう。与えられたテキスト（英文）に出現する単語を数えるというものです。</p>
+<dl>
+<dt>実行する処理</dt>
+<dd>与えられたテキストに出現する単語を数える</dd>
+</dl>
+<h3>実行の手順</h3>
+<p>Amazon EMRにはApache Hadoopが使われています。本来Hadoopを使うためには、Hadoopの環境そのものをセットアップする必要があるのですが、そこをAWSが既にやってくれているわけです。</p>
+<p>そのため、手順としては</p>
+<ol>
+<li>Hadoopのジョブとなるjarファイルを作る</li>
+<li>そのjarファイルと入力ファイルをAmazon S3へアップロードする</li>
+<li>Amazon EMRのコンソールから処理を実行する</li>
+</ol>
+<p>となります。<!--more--></p>
+<h3>ジョブのjarファイルを作る</h3>
+<p>まずはmavenでプロジェクトを作成しましょう。</p>
+<p>執筆時点でサポートされているHadoopのバージョンは0.20.2ですので、該当するdependencyを追加します。</p>
+<pre>&lt;dependency&gt;
+  &lt;groupId&gt;org.apache.hadoop&lt;/groupId&gt;
+  &lt;artifactId&gt;hadoop-core&lt;/artifactId&gt;
+  &lt;version&gt;0.20.205.0&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>次に必要なクラスを実装していきます。</p>
+<ul>
+<li>エントリーポイントとなる、mainメソッドをもつクラス</li>
+<li>Mapperクラス</li>
+<li>Reducerクラス</li>
+</ul>
+<p>この３つのクラスが必要になりますが、今回は１つのソースファイルに納めてしまうことにしましょう。コードは以下のようになります。内容はチュートリアルのサンプルコードほぼそのままです。</p>
+<pre>package hadooptest;
+
+import java.io.IOException;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+public class WordCount {
+
+	/**
+	 * Mapper
+	 */
+	public static class Map
+			extends Mapper&lt;LongWritable, Text, Text, IntWritable&gt; {
+
+		private final static IntWritable one = new IntWritable(1);
+		private Text word = new Text();
+
+		@Override
+		public void map(
+				LongWritable key,
+				Text value,
+				Context context) throws IOException, InterruptedException {
+
+			String line = value.toString();
+			StringTokenizer tokenizer = new StringTokenizer(line);
+			while (tokenizer.hasMoreTokens()) {
+				word.set(tokenizer.nextToken());
+				context.write(word, one);
+			}
+		}
+	}
+
+	/**
+	 * Reducer
+	 */
+	public static class Reduce
+			extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt; {
+
+		@Override
+		public void reduce(
+				Text key,
+				Iterable&lt;IntWritable&gt; values,
+				Context context) throws IOException, InterruptedException {
+			int sum = 0;
+			for (IntWritable value : values) {
+				sum += value.get();
+			}
+			context.write(key, new IntWritable(sum));
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Job job = new Job();
+		job.setJarByClass(WordCount.class);
+		job.setJobName("wordcount");
+
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+
+		job.setMapperClass(Map.class);
+		job.setReducerClass(Reduce.class);
+
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+
+		FileInputFormat.setInputPaths(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+		job.waitForCompletion(true);
+	}
+}</pre>
+<p>なお、hadoop-0.20.2はAPIの移行期にあり、旧APIはorg.apache.hadoop.mapredパッケージ以下に、新APIは<span style="color: #ff0000;">org.apache.hadoop.mapreduce</span>パッケージ以下にあります。似たような名前のクラスが多いので注意してください。</p>
+<p>またmapとreduceの実装メソッドには、必ず@Overrideアノテーションを付けておくことをお勧めします。なぜならMapperクラス・Reducerクラスとも具象クラスであり、メソッドの実装を強制されないためです。（それはシグネチャが間違っていても、コンパイルエラーにならないことを意味します）</p>
+<p>これをmavenでjarにしておきましょう。</p>
+<h3>ファイルをAmazon S3へアップロードする</h3>
+<p>処理の入力となるテキストファイルを作成します。なんでも構わないのですが、今回はこんなテキストを用意しました。</p>
+<pre>Now the serpent was more subtil than any beast of the field which the LORD God had made. And he said unto the woman, Yea, hath God said, Ye shall not eat of every tree of the garden?
+And the woman said unto the serpent, We may eat of the fruit of the trees of the garden:
+But of the fruit of the tree which is in the midst of the garden, God hath said, Ye shall not eat of it, neither shall ye touch it, lest ye die.
+And the serpent said unto the woman, Ye shall not surely die:
+For God doth know that in the day ye eat thereof, then your eyes shall be opened, and ye shall be as gods, knowing good and evil.
+And when the woman saw that the tree was good for food, and that it was pleasant to the eyes, and a tree to be desired to make one wise, she took of the fruit thereof, and did eat, and gave also unto her husband with her; and he did eat.
+And the eyes of them both were opened, and they knew that they were naked; and they sewed fig leaves together, and made themselves aprons.</pre>
+<p>AWSのWebコンソールにログインして、S3のタブを開きます。</p>
+<p>次にEMR用に新しくバケットを作成し、更にバケットの中にフォルダ"input"、"jar"を作成します。そのフォルダにそれぞれ入力ファイル、jarファイルをアップロードします。</p>
+<p>これで実行の準備ができました。</p>
+<h3>処理を実行する</h3>
+<p>AWSのWebコンソールで、Elastic MapReduceのタブを開きます。</p>
+<p>ジョブフローの作成ボタンを押し、ウィザードを開きます。いくらか細かい設定もできるのですが、ここでは大切なところだけを挙げます。</p>
+<ul>
+<li>Job Typeでは"Custom JAR"を選択します</li>
+<li>JAR Locationは、s3://&lt;backet-name&gt;/jar/&lt;jarfile-name&gt; とします</li>
+<li>JAR Argumentsでは、以下のように引数を３つ与えます</li>
+<ul>
+<li>hadooptest.WordCount ・・・mainメソッドをもつクラス名</li>
+<li>s3://&lt;backet-name&gt;/input ・・・入力ファイルのを置いたフォルダ</li>
+<li>s3://&lt;backet-name&gt;/output ・・・結果を出力するフォルダ</li>
+</ul>
+<li>Keep Aliveは"No"を選択します（処理が終了したらEC2インスタンスを破棄します）</li>
+</ul>
+<p>出力フォルダが既に存在しているとエラーになりますので注意してください。</p>
+<p>ウィザードを完了すると、ジョブフロー一覧画面に今作成したジョブフローが表示されます。処理が完了するまでしばらく待ちましょう。</p>
+<h3>結果</h3>
+<p>処理が完了すると、状態のカラムが"COMPLETED"になります。（失敗した場合は”FAILED”）Amazon S3の指定したフォルダ内に結果が出力されているはずですので、確認してみましょう。</p>
+<p>以下実行結果の一部です。ちゃんと単語が数えられていますね。</p>
+<pre>And	5
+But	1
+LORD	1
+Now	1
+We	1
+also	1
+as	1
+beast	1
+desired	1
+did	2
+doth	1
+eat	4
+eyes,	1
+fruit	3
+garden,	1</pre>
+<p>これでMapReduceを使った処理が実行できました。</p>

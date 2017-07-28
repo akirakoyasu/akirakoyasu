@@ -1,0 +1,152 @@
+---
+layout: post
+title: アノテーションのインスタンスを取得する
+date: 2012-12-19 04:30:46.000000000 -06:00
+type: post
+published: true
+status: publish
+categories:
+- Program
+tags:
+- Annotation
+- Java
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: |-
+    Javaにおいて、アノテーションのインスタンスを取得する方法について考察します。
+    このエントリはJava Advent Calendar 2012の第19日目のエントリです。
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501265322;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:593;}i:1;a:1:{s:2:"id";i:759;}i:2;a:1:{s:2:"id";i:873;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>このエントリは<a href="http://atnd.org/events/33871">Java Advent Calendar 2012</a>の第19日目のエントリです。<br />
+昨日は <a href="https://twitter.com/yoshioterada">@yoshioterada</a> さんの「<a href="http://yoshio3.com/2012/12/18/jsr166e-concurrency-update/">Concurrency Update (jsr166e)のご紹介</a>」でした。<br />
+明日は <a href="https://twitter.com/kis">@kis</a> さんの「<a href="http://d.hatena.ne.jp/nowokay/20121221#1356065965">Javaでのパターンマッチを考える</a>」です。</p>
+<p>お二人に挟まれて、私は自分の少し恥ずかしい話をします。今日のテーマはアノテーションのインスタンスについてです。</p>
+<h3>事の起こり</h3>
+<p>私はある日、こういうメソッドに出くわしました。</p>
+<pre>select(Annotation...)</pre>
+<p>なるほどAnnotationクラスを引数として渡すのね、と初めは軽く考えてしまったのですが、実際にこのメソッドを呼ぼうとしたとき困りました。</p>
+<p>最初に書いたコードはこうです。（笑</p>
+<pre>select(@Customized);</pre>
+<p>コンパイルエラーになりました。というかEclipseなので赤線が出ました。ここでアレっ？と思ったわけです。そこでコードを次のように直してみました。</p>
+<pre>select(Customized.class);</pre>
+<p>それでもやっぱり赤線が出ます。おや？ メソッドが呼べない！ もう大混乱です。</p>
+<h3>Annotationクラスって何でしょう</h3>
+<p>メソッドの定義がおかしいのでしょうか。いやいや、呼べないようなメソッドが定義されているはずはないので（なにしろJavaEEのAPIです）、私のコードが間違っている可能性の方が極めて高いです。頭を冷やしてよく考えてみましょう。</p>
+<p>アノテーションでよく使うのはこういうコードですよね。</p>
+<pre>@Override
+public String toString() {
+     // ...
+}</pre>
+<p>この@Overrideは<strong>アノテーションによる注釈付けをするときの書き方</strong>なわけです。</p>
+<p>ではCustomized.classは・・・？ 変数に代入してみるとよくわかります。</p>
+<pre>Class&lt;Customized&gt; type = Customized.class;</pre>
+<p>なるほど、Customized.classは<strong>Customizedクラスを表すクラスインスタンス</strong>です。</p>
+<p>とするとAnnotationクラスはどういった場面で登場するのでしょうか。こういうときは初心に帰って、Java docを開いてみます。java.lang.annotation.Annotationインターフェースの「使用」を見てみると、Class#getAnnotations()というメソッドの戻り値がAnnotation[]になっています。リフレクションですね。</p>
+<pre>@Customized
+public class ObtainAnnotation {
+     public static void main(String[] args) {
+          Annotation[] annotations
+               = ObtainAnnotation.class.getAnnotations();
+
+          for (Annotation a : annotations) {
+               System.out.println(a);
+          }
+     }
+}</pre>
+<pre class="output">@Customized()</pre>
+<p>ようやく分かってきました。アノテーションによって<strong>注釈付けされた要素に付いている、実際のアノテーションを表す</strong>のがAnnotationクラスのインスタンスです。<!--more--></p>
+<h3>アノテーションをインスタンス化するには・・・？</h3>
+<p>次に問題になるのは、アノテーションのインスタンスをいかに得るかということです。確かに注釈付けされた要素からリフレクションで得られることはわかりましたが、まさかいちいち注釈付け→リフレクションして取得するというのも奇妙な話です。</p>
+<p>実際のところ、JavaEE6にはアノテーションのインスタンスを取得するためのクラス、AnnotationLiteral&lt;T&gt;が用意されています。具体的な使い方は<a title="Programmatic CDI" href="http://www.akirakoyasu.net/2012/12/16/programmatic-cdi/">Programmatic CDI</a>の方に書きましたので、よろしければ参照してみてください。</p>
+<p>当然ながらそのクラスは、JavaEE環境でなければ（標準では）使用することができません。そこでJavaSE環境でアノテーションのインスタンスを取得するための方法を考えてみましょう。</p>
+<h4>newしてみる</h4>
+<p>まずは普通にnewしてみたらどうでしょうか。たぶんうまく行かない気がしますがやってみます。</p>
+<pre>Customized c = new Customized();</pre>
+<p>予想通り、これはコンパイルエラーになりました。</p>
+<h4>リフレクションで生成</h4>
+<p>次に思いつくのはクラスからリフレクションで生成するという方法です。</p>
+<pre>public class ObtainAnnotation2 {
+     public static void main(String[] args) {
+          try {
+               Customized c = Customized.class.newInstance();
+               System.out.println(c);
+          } catch (InstantiationException e) {
+               e.printStackTrace();
+          } catch (IllegalAccessException e) {
+               e.printStackTrace();
+          }
+     }
+}</pre>
+<pre class="output">java.lang.InstantiationException: Customized
+     at java.lang.Class.newInstance0(Class.java:357)
+     at java.lang.Class.newInstance(Class.java:325)
+     at ObtainAnnotation2.main(ObtainAnnotation2.java:5)</pre>
+<p>例外が発生してしまいました。これでもやっぱりダメなようですね。メッセージには出ていませんが、該当行の辺りを見てみるとコンストラクタを取得するところで失敗しています。どういうことでしょう？</p>
+<h3>アノテーションはインターフェース</h3>
+<p>手がかりはアノテーションの定義にあります。アノテーションを定義するコードは、例えば以下のようなものですよね。</p>
+<pre>@Retention(RUNTIME)
+@Target({METHOD, FIELD, PARAMETER, TYPE})
+public <span style="color: #0000ff;" data-mce-mark="1">@interface</span> Customized {
+
+}</pre>
+<p>よく見てみると@interfaceと書いてあるではないですか。そうなんでした、アノテーションは特別なインターフェースなのです。直接インスタンス化できないのは当然です。</p>
+<h4>アノテーションを実装する</h4>
+<p>インターフェースと分かれば、道は見えました。実装を自分で書けばインスタンス化できるはずです。</p>
+<pre>public class CustomizedModifier implements Customized {
+     private static final Class type = Customized.class;
+
+     @Override
+     public Class&lt;? extends Annotation&gt; annotationType() {
+          return type;
+     }
+
+     @Override
+     public boolean equals(Object o) {
+          if (o == this) {
+               return true;
+          }
+          if (!type.isInstance(o)) {
+               return false;
+          }
+          return true;
+     }
+
+     @Override
+     public int hashCode() {
+          return 0;
+     }
+}
+// ...
+Customized c = new CustomizedModifier();</pre>
+<p>これでコンパイルエラーは出なくなり、その代わりに見慣れない警告："The annotation type Customized should not be used as a superinterface for CustomizedModifier"が出るようになりました。コンパイラが不審がるのももっともです。アノテーションは注釈をつけるための仕組みであるから、振る舞い（＝実装）を持つべきではない、というわけです。</p>
+<p>ちなみに@SuppressWarningsでこの警告のみを抑制する値を探したのですが、見つかりませんでした。コンパイラ次第ですが、"all"を使うしかないかもしれません。</p>
+<h4>リフレクションの実装を見る</h4>
+<p>ちょっと目先を変えて、お手本になりそうなものを見てみましょう。OpenJDKではアノテーションのインスタンスをどうやって作っているのでしょうか。OpenJDKのリフレクション部分のソースを追ってみると、sun.reflect.annotation.AnnotationParser内に実装がありました。以下該当メソッドの引用です。</p>
+<pre>public static Annotation annotationForMap(
+        Class&lt;? extends Annotation&gt; type, Map&lt;String, Object&gt; memberValues)
+{
+    return (Annotation) Proxy.newProxyInstance(
+        type.getClassLoader(), new Class[] { type },
+        new AnnotationInvocationHandler(type, memberValues));
+}</pre>
+<p>なるほど、Proxyを使っているんですね。リフレクションでは未知のアノテーションも扱わなければなりませんので、このようになっているのでしょう。うーむ、あまり参考になりませんでしたね。</p>
+<h3>まとめ</h3>
+<p>残念ながら、すっきりした解決策は今のところありません。既知のアノテーションのインスタンスを取得するのであれば、@SuppressWarnings("all")のリスクがあるとしても、型安全を考えてそのアノテーションインターフェースを実装するのが良いと思います。</p>
+<p>ただしアノテーションの正しい実装を書くことは、特にメンバーを持つアノテーションの場合、実はかなり骨の折れる作業です。java.lang.annotation.AnnotationのJava docにequals()やhashCode()の実装方法が規定されていますので、それを注意深く実装する必要があります。JavaEE6のCDIに用意されたAnnotationLiteral&lt;T&gt;は、その部分を実装してくれているのです。</p>
+<p>そのCDIの参照実装であるJBoss Weldのコミュニティでも、AnnotationLiteral&lt;T&gt;の使用について疑問が呈されているのを目にしました。結論としては、Javaにアノテーションのリテラル記法が用意されていない以上、これ（AnnotationLiteral&lt;T&gt;の使用＝アノテーションインターフェースの実装）が最善であるとされたようです。</p>
+<p>そういえばリフレクションを使っていると、もどかしく感じることが多々ありますよね。</p>
+<ul>
+<li>パッケージリテラル</li>
+<li>フィールドリテラル</li>
+<li>メソッドリテラル</li>
+<li>アノテーションリテラル</li>
+</ul>
+<p>仮にこの４つが言語仕様に追加されたとすれば、リフレクションもかなり簡潔に書けるようになるのではないでしょうか。このうちパッケージリテラルは、どこかで導入が検討されている/いたと話に聞いたことがあるような・・・？</p>
