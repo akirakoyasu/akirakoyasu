@@ -42,7 +42,8 @@ author:
 <li>java.nio.channels.ServerSocketChannel</li>
 <li>java.nio.channels.AsynchronousServerSocketChannel</li>
 </ul>
-<p>この３通りです。前回使った ServerSocket はブロッキングモードで処理をします。２番目の ServerSocketChannel はブロッキングモードとノンブロッキングモードのどちらでも処理をすることができます。加えて効率の良いChannelクラスを使って読み書きできますので、ブロッキングモードで処理したい場合であってもJDK1.4以上の環境ならば、ServerSocket より ServerSocketChannel を使用することを考えた方がよいと思います。<!--more--></p>
+<p>この３通りです。前回使った ServerSocket はブロッキングモードで処理をします。２番目の ServerSocketChannel はブロッキングモードとノンブロッキングモードのどちらでも処理をすることができます。加えて効率の良いChannelクラスを使って読み書きできますので、ブロッキングモードで処理したい場合であってもJDK1.4以上の環境ならば、ServerSocket より ServerSocketChannel を使用することを考えた方がよいと思います。</p>
+<!--more-->
 <h3>java.nio.channels.ServerSocketChannel をブロッキングモードで使う</h3>
 <p>というわけで、前回の ServerSocket を ServerSocketChannel に置き換えて、ブロッキングモードで処理してみましょう。</p>
 <pre>try (ServerSocketChannel listener = ServerSocketChannel.open();) {

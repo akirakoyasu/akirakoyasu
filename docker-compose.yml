@@ -1,7 +1,8 @@
 version: '3'
 services:
   jekyll:
-    image: jekyll/jekyll
+    build: .
+    image: akirakoyasu/jekyll
     command:
       - jekyll
       - serve

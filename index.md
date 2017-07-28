@@ -11,6 +11,11 @@ and machine-learning.
 
 # Research
 
-# Blog
+# [Blog]({{ '/blog/' | relative_url }})
+{% for post in site.posts limit:2 %}
+## [{{ post.title }}]({{ post.url }})
+{{ post.excerpt }} [>> more]({{ post.url }})
+
+{% endfor %}
 
 # Resources

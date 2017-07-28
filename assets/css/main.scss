@@ -1,0 +1,23 @@
+---
+---
+
+.pagination {
+  display: table;
+  width: 100%;
+
+  > * {
+    display: table-cell;
+  }
+
+  .previous {
+    text-align: left;
+    width: 33%;
+  }
+  .page_number {
+    text-align: center;
+  }
+  .next {
+    text-align: right;
+    width: 33%;
+  }
+}
