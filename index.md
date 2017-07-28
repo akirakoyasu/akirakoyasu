@@ -6,6 +6,8 @@ layout: home
 ---
 
 # About me
+I am a System Engineer working for a start-up in Tokyo. My focus are web, server-side, API, analysis, natural language
+and machine-learning.
 
 # Research
 
