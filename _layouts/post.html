@@ -9,6 +9,15 @@
 
     <section>
         {{ content }}
+
+        <div class="pagination">
+            {% if page.previous %}
+            <a href="{{ page.previous.url }}" class="previous">&laquo; {{ page.previous.title }}</a>
+            {% endif %}
+            {% if page.next %}
+            <a href="{{ page.next.url }}" class="next">{{ page.next.title }} &raquo;</a>
+            {% endif %}
+        </div>
     </section>
 
     {% include footer.html %}
