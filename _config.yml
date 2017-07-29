@@ -34,6 +34,7 @@ markdown: kramdown
 theme: jekyll-theme-dinky
 gems:
   - jekyll-feed
+  - jekyll-sitemap
 
 # Exclude from processing.
 exclude:
