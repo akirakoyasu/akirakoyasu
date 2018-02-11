@@ -2,11 +2,15 @@ version: '3'
 services:
   jekyll:
     build: .
-    image: akirakoyasu/jekyll
+    image: akirakoyasu/akirakoyasu.github.io
+    working_dir: /srv/jekyll
     command:
+      - bundle
+      - exec
       - jekyll
       - serve
-      - --force_polling
+      - --host
+      - 0.0.0.0
     ports:
       - 4000:4000
     volumes:
