@@ -28,8 +28,8 @@ author:
   last_name: ''
 ---
 <p>AWSのDNSサービスにAmazon Route 53なるものがあります。最近多数のドメインをそのAmazon Route 53へ設定しなければならないことがあったため、CLIで処理をしたくなりました。</p>
-<p>AWSに関するCLIとしては以前<a href="http://www.akirakoyasu.net/s3tools/" title="s3tools: Amazon S3 CLI">s3tools</a>を書いていたので、割合簡単に書けることも分かっていました。そこで再び自分でCLIを書いてみました。</p>
-<p><a href="http://www.akirakoyasu.net/r53tools/">r53tools: Amazon Route 53 CLI</a></p>
+<p>AWSに関するCLIとしては以前<a href="/s3tools/" title="s3tools: Amazon S3 CLI">s3tools</a>を書いていたので、割合簡単に書けることも分かっていました。そこで再び自分でCLIを書いてみました。</p>
+<p><a href="/r53tools/">r53tools: Amazon Route 53 CLI</a></p>
 <p>これを修正BSDライセンスで公開します。動作環境はJavaSE6.0以降です。</p>
 <p>機能としては、ゾーンの作成/一覧・レコードの作成/一覧/削除、を備えています。ゾーンの削除はAWSのWebコンソールから実行した方が良いように思ったので、今のところ用意しませんでした。</p>
 <p>例によってLinux/Mac用のshスクリプトしか書いていません（Windows用を書いてもテストが・・・）。s3toolsの方も機能追加しようと思いつつ出来てないですが、そのうちやります。</p>

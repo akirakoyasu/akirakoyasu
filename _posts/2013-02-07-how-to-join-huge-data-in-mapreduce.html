@@ -26,7 +26,7 @@ author:
 <p>立春をすぎて、暖かく感じる日も増えてきた今日この頃です。さて春といえばミツバチ、ミツバチといえばHiveですが、今日はHiveを使わないで純粋なMapReduceで、巨大データ同士をJOINするための一つの方法を書き留めたいと思います。</p>
 <h3>よくある問題</h3>
 <p>具体的に考えるために、状況を想定してみます。例えば以下の２つのテーブル、アクセスログ（日時，ユーザID，アクセスURL）とユーザマスタ（ユーザID，年齢，性別，住所）があるとします。これらのテーブルをユーザIDで結合したいとしましょう。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2013/02/07/how-to-join-huge-data-in-mapreduce/join-in-mapreduce-1/"><img class=" wp-image-877 aligncenter article" alt="join tables" src="{{ site.baseurl }}/assets/join-in-mapreduce-1.png" width="473" height="69" /></a></p>
+<p style="text-align: center;"><img class=" wp-image-877 aligncenter article" alt="join tables" src="{{ site.baseurl }}/assets/join-in-mapreduce-1.png" width="473" height="69" /></p>
 <p>SQLで言えば次のような処理ということになります。</p>
 <pre>SELECT *
   FROM access_log
@@ -36,7 +36,7 @@ author:
 <h3>解</h3>
 <p>このようなとき、まず思い浮かぶのは<a title="Apache Hive" href="http://hive.apache.org">Hive</a>を使うことです。SQLに慣れているならば、極めて直感的に処理を書くことができます。（先述のSQLを書くだけです）</p>
 <p>ただしHiveを使わず、純粋な<a title="Apache Hadoop" href="http://hadoop.apache.org">MapReduce</a>を書いて処理したいこともあるでしょう。その場合次の図に示すような手順が考えられます。ここでは３つのMapReduceを使います。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2013/02/07/how-to-join-huge-data-in-mapreduce/join-in-mapreduce-2/"><img class=" wp-image-878 article aligncenter" alt="Join in MapReduce" src="{{ site.baseurl }}/assets/join-in-mapreduce-2.png" width="551" height="607" /></a></p>
+<p style="text-align: center;"><img class=" wp-image-878 article aligncenter" alt="Join in MapReduce" src="{{ site.baseurl }}/assets/join-in-mapreduce-2.png" width="551" height="607" /></p>
 <ol>
 <li>まず１つ目のMapReduceは、アクセスログを入力とします。Mapperでレコードに含まれているユーザIDを取り出し、テーブル番号（０）と共にレコードの先頭に追加して出力します。Reducerは不要です。</li>
 <li>２つ目のMapReduceも、ユーザマスタを入力として１つ目と似た処理を行います。即ち、MapperでユーザマスタのレコードからユーザIDを取り出し、テーブル番号（１）と共にレコードの先頭に追加して出力します。これもやはりReducerは不要です。</li>

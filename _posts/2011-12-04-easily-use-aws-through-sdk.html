@@ -56,7 +56,7 @@ public static final String AWS_SECRET_ACCESSKEY
     = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn";</pre>
 <h3>Amazon Simple Storage Service (S3)</h3>
 <p>まずはご存知S3から使ってみることにします。S3は、キーに紐づくオブジェクトを格納できるストレージで、かなり大きなオブジェクトも格納できるのが特徴です。今は5テラバイトまで格納できるようです。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2011/12/04/easily-use-aws-through-sdk/aws_s3/"><img class=" wp-image-263 aligncenter article" title="AWS_S3" alt="Amazon S3" src="{{ site.baseurl }}/assets/AWS_S3.png" width="512" height="300" /></a></p>
+<p style="text-align: center;"><img class=" wp-image-263 aligncenter article" title="AWS_S3" alt="Amazon S3" src="{{ site.baseurl }}/assets/AWS_S3.png" width="512" height="300" /></p>
 <p>例としてXMLファイルを格納し、それをまた取り出してみましょう。バケット名はS3のサービス全体で一意でなければならないことに注意してください。</p>
 <pre>// 認証オブジェクト
 AWSCredentials credential
@@ -103,7 +103,7 @@ client.shutdown();</pre>
 <p>このコードを実行すると、わらわらとAmazonHttpClientのログが出力された後、取り出したXMLの内容が出力されます。</p>
 <h3>Amazon SimpleDB</h3>
 <p>次はSimpleDBに挑戦してみましょう。SimpleDBは、複数の属性（カラムに当たります）を持つデータセット（レコード）を格納できるデータベースです。スキーマ定義は不要で、各データセットの属性を自由に設定できます。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2011/12/04/easily-use-aws-through-sdk/aws_simpledb/"><img class="aligncenter  wp-image-264 article" title="AWS_SimpleDB" alt="Amazon SimpleDB" src="{{ site.baseurl }}/assets/AWS_SimpleDB.png" width="512" height="300" /></a></p>
+<p style="text-align: center;"><img class="aligncenter  wp-image-264 article" title="AWS_SimpleDB" alt="Amazon SimpleDB" src="{{ site.baseurl }}/assets/AWS_SimpleDB.png" width="512" height="300" /></p>
 <p>以下のコードは簡単なデータ操作を行うものです。</p>
 <pre>// 認証オブジェクト
 AWSCredentials credential

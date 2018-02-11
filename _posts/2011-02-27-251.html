@@ -32,7 +32,7 @@ author:
 <p>方法はいくつか考えられますが、JavaSE6 にある標準技術 JAXB (Java Architecture for XML Binding) では、この変換を手軽に実装できるようになっています。その使い方を解説しようと思います。</p>
 <h3>JAXBの考え方</h3>
 <p>まずはJAXBの考え方を俯瞰しておきます。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2011/02/27/251/jaxb/"><img class=" wp-image-49 article aligncenter" title="JAXB" alt="" src="{{ site.baseurl }}/assets/JAXB.gif" width="401" height="331" /><!--more--></a></p>
+<p style="text-align: center;"><img class=" wp-image-49 article aligncenter" title="JAXB" alt="" src="{{ site.baseurl }}/assets/JAXB.gif" width="401" height="331" /><!--more--></p>
 <p>図のように、JavaクラスとXML Schemaとが対応するものと考えます。言われてみればもっともな話で、実体としてJavaオブジェクト・XML文書があり、その雛形としてJavaクラス・XML Schemaがあるということですね。</p>
 <p>ここから分かる通り、JAXBの出発点はJavaクラスかXML Schemaになります。どちらから始めても実装可能です。</p>
 <h3>JavaオブジェクトからXMLへの変換</h3>

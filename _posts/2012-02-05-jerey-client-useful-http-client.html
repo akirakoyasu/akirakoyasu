@@ -41,7 +41,7 @@ author:
 <pre>Client c = Client.create();
 WebResource r = c.resource("http://www.example.com/");
 String html = r.get(String.class);</pre>
-<p>これだけです。説明も不要なくらいごく簡潔ですね。<a href="http://www.akirakoyasu.net/2012/02/05/jerey-client-useful-http-client/jersey-client_1/"><img class="alignright  wp-image-414 article" title="ClientとWebResource" alt="ClientとWebResource" src="{{ site.baseurl }}/assets/jersey-client_1.png" width="435" height="384" /></a></p>
+<p>これだけです。説明も不要なくらいごく簡潔ですね。<img class="alignright  wp-image-414 article" title="ClientとWebResource" alt="ClientとWebResource" src="{{ site.baseurl }}/assets/jersey-client_1.png" width="435" height="384" /></p>
 <ol>
 <li>Clientインスタンスを作る</li>
 <li>URLからWebResourceインスタンスを作る</li>
@@ -106,7 +106,7 @@ String html = c.resource("http://www.example.com/")
 	.get(String.class);</pre>
 <h3>ClientFilter</h3>
 <p>jersey-clientの特徴として、フィルターによるカスタマイズがあります。プログラミングモデルとしてはServletFilterに近いイメージですね。この仕組みがコンパクトなAPIに柔軟性を与えていて、個人的に気に入っているポイントでもあります。</p>
-<p style="text-align: center;"><a href="http://www.akirakoyasu.net/2012/02/05/jerey-client-useful-http-client/jersey-client_2/"><img class="aligncenter  wp-image-419 article" title="ClientFilterのチェーン" alt="ClientFilterのチェーン" src="{{ site.baseurl }}/assets/jersey-client_2.png" width="723" height="198" /></a></p>
+<p style="text-align: center;"><img class="aligncenter  wp-image-419 article" title="ClientFilterのチェーン" alt="ClientFilterのチェーン" src="{{ site.baseurl }}/assets/jersey-client_2.png" width="723" height="198" /></p>
 <p>Clientクラス・WebResourceクラスともにFilterableインターフェイスを実装しており、各々にフィルタを適用できます。具体的にはClientFilterを拡張したクラスを作成し、handle()メソッドを実装します。<br />
 ※先ほどBasic認証の設定で使ったHTTPBasicAuthFilterは、予め用意されているClientFilterの拡張クラスです。</p>
 <pre>Filterable#addFilter(new ClientFilter() {
