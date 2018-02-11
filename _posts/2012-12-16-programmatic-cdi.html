@@ -1,0 +1,151 @@
+---
+layout: post
+title: Programmatic CDI
+date: 2012-12-16 10:33:53.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Program
+- CDI
+- Java
+- JavaEE6
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: |-
+    CDI 1.0 (JSR-299: Context and Dependency Injection) のAPIを使って、CDI管理下のインスタンスを取得する方法を紹介します。
+    このエントリはJavaEE Advent Calendar 2012 第16日目のエントリです。
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501241631;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:593;}i:1;a:1:{s:2:"id";i:797;}i:2;a:1:{s:2:"id";i:487;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>このエントリは<a title="JavaEE Advent Calendar 2012" href="http://atnd.org/events/33783">JavaEE Advent Calendar 2012</a> 第16日目のエントリです。<br />
+昨日は <a href="https://twitter.com/kokuzawa">@kokuzawa</a> さんの「<a href="http://kokuzawa.github.com/blog/2012/12/15/point-to-point-on-jms/">Point-to-Point on JMS</a>」でした。<br />
+明日は <a href="https://twitter.com/yumix_h">@yumix_h</a> さんの「<a href="http://yumix.hatenablog.jp/entry/2012/12/17/002515">JAX-RSでファイルアップロード！</a>」です。</p>
+<p>今日のテーマはCDI 1.0 (<a href="http://www.jcp.org/en/jsr/detail?id=299">JSR 299: Contexts and Dependency Injection for the Java EE platform</a>)です。特にAPIからCDIを使う方法について書き留めたいと思います。なお、動作検証はMac OS X 10.8.2 + JDK 1.7.0_05 + GlassFish 3.1.2 で行っています。</p>
+<h3>CDIの基本</h3>
+<p>まずはCDIの基本的な使い方について、簡単にまとめておきましょう。キーになるのはスコープとインジェクションポイントです。</p>
+<h4>スコープ</h4>
+<p>スコープとは、インスタンスの生存期間のことです。それぞれのアノテーションでクラス、あるいはプロデューサフィールド/メソッドをマークすることによって表します。</p>
+<pre>// Userクラスをセッションスコープとしてマーク
+@SessionScoped
+public class User implements Serializable {
+
+}</pre>
+<p>予め用意されているスコープは</p>
+<ul>
+<li>@ApplicationScoped</li>
+<li>@SessionScoped</li>
+<li>@ConversationScoped (with JSF)</li>
+<li>@RequestScoped</li>
+</ul>
+<p>の４種類です。意味は名前からだいたい想像がつくと思いますが、ConversationScopeは少し特殊かもしれませんね。これはJSFと共に使用するもので、ブラウザタブ毎に複数リクエストに渡って維持することのできるスコープです。<!--more--></p>
+<h4>インジェクションポイント</h4>
+<p>インジェクションポイントとは、依存性を解決されたインスタンスが注入される場所のことで、@Injectを使って表します。フィールド、コンストラクタ、あるいはメソッドをマークします。</p>
+<pre>@RequestScoped
+public class Ephemera {
+  // Userインスタンスをインジェクション
+  @Inject
+  private User user;
+}</pre>
+<h4>beans.xml</h4>
+<p>CDIを有効化するためには、beans.xmlファイルをWEB-INF/（Webモジュールの場合）、あるいはMETA-INF/（EJBモジュールの場合）に配置します。また、依存jarファイルにインジェクション対象となるクラスを含む場合、そのjarファイル内のMETA-INF/にもbeans.xmlファイルを配置する必要があります。いずれのbeans.xmlも空のファイルで構いません。</p>
+<h3>APIを利用する</h3>
+<p>ほかにもQualifierとかいろいろ面白いのですが、その辺りは今日の本題ではないので別の機会に譲ります。ということで、このようにアノテーションによってコンテキストと依存性を解決することができるのがCDIです。ただしアノテーションはあくまで静的な記述ですから、</p>
+<ul>
+<li>インジェクション対象となるクラスは、依存性を一意に解決できる</li>
+<li>１つのインジェクションポイントには、常に１つのクラスのインスタンスがインジェクションされる</li>
+</ul>
+<p>といった前提条件があります。しかし場合によってはもう少し柔軟な処理が必要になることもあるでしょう。例えばフレームワークやライブラリを書いているときなどは、あるインターフェースを実装するクラスが複数存在したり、１つのインジェクションポイントに条件次第で異なる実装クラスをインジェクションしたり・・・などということもよくよくあるものです。</p>
+<p>CDIにはアノテーション以外のAPIも定義されていますので、それを使ってみましょう。</p>
+<h4>Instance&lt;T&gt;</h4>
+<p>javax.enterprise.inject.Instance&lt;T&gt;はT型のCDI管理インスタンスを選択・取得するためのクラスです。T型の実装が存在しない、あるいは複数存在する可能性がある場合に使用できます。</p>
+<p>例えばこのようなクラス構成を考えます。（それぞれのクラスについているアノテーションはQualifierとします）</p>
+<p style="text-align: center;"><img class=" wp-image-778 article aligncenter" alt="Programmatic CDI classes" src="{{ site.baseurl }}/assets/programmatic-cdi_class.png" width="502" height="292" /></p>
+<p>そして次のサーブレットを実行してみましょう。</p>
+<pre>public class MyServlet extends HttpServlet {
+     private static final long serialVersionUID = 1L;
+
+     // インターフェースPersonの実装をインジェクション
+     <span style="color: #0000ff;">@Inject @Any Instance&lt;Person&gt; instance;</span>
+
+     protected void doGet(HttpServletRequest request,
+               HttpServletResponse response) throws ServletException, IOException {
+          PrintWriter out = response.getWriter();
+
+          if (instance.isUnsatisfied()) {
+               out.println("Person is not implemented");
+          } else if (instance.isAmbiguous()) {
+               out.printf("Person is implemented:%n");
+               for (Person person : instance) {
+                    out.printf(" - %s%n", person);
+               }
+          } else {
+               out.printf("Person is implemented: %s%n", instance.get());
+          }
+     }
+}</pre>
+<pre class="output">$ curl "http://localhost:8080/cdi/MyServlet"
+Person is implemented:
+ - Admin@6e028a6a
+ - User@7a0c4fd9
+ - SpecialUser@3e4e6e28</pre>
+<p>なお@Injectと共に付いている@AnyはQualifierを無視するためのアノテーションです。@Anyを付けない場合、QualifierのないUserクラスのインスタンスのみが選択されてインジェクションされます。</p>
+<p>さてこれで複数の実装クラスを手にすることができました。次はいずれかの実装を選択しましょう。そのためにはInstance#select(Annotation...)メソッドにQualifierを渡します。</p>
+<p>・・・ちょっと待ってください、引数としてアノテーションのインスタンスを渡す必要があるのですね。アノテーションのインスタンスってどうやって作るのでしょう？ この話題はJava Advent Calendarの方で書こうと思っているのですが、CDIにはちゃんとインスタンス化の方法が用意されています。（でもやっぱりちょっと面倒です）</p>
+<p>具体的にはjavax.enterprise.util.AnnotationLiteral&lt;T&gt;を拡張して以下のようなクラスを作成します。</p>
+<pre>@SuppressWarnings("all")
+public class SupervisorQualifier
+     extends AnnotationLiteral&lt;Supervisor&gt; implements Supervisor {
+     private static final long serialVersionUID = 1L;
+}</pre>
+<p>こうして作ったクラスを使って、Instance#select(Annotation...)メソッドをコールします。ついでに言うとこのメソッドの戻り値もInstance&lt;T&gt;なので、複数のQualifierを順に絞っていくような選択の仕方も可能です。</p>
+<pre>out.printf("@Supervisor %s%n",
+          instance.select(new SupervisorQualifier()).get());
+out.printf("@Default %s%n",
+          instance.select(new DefaultQualifier()).get());
+out.printf("@Customized %s%n",
+          instance.select(new CustomizedQualifier()).get());</pre>
+<pre class="output">$ curl "http://localhost:8080/cdi/MyServlet"
+...
+@Supervisor Admin@77f606ea
+@Default User@81bbd46
+@Customized SpecialUser@49414ab</pre>
+<p>これでそれぞれの実装を選択することができました。</p>
+<h4>BeanManager, Bean&lt;T&gt;</h4>
+<p>前項のInstance&lt;T&gt;は@Injectと共に使用するクラスでした。つまりInstance&lt;T&gt;が使用できるのは、@Injectが有効な場所に限られます。</p>
+<p>それに対してjavax.enterprise.inject.spi.BeanManagerはJNDI名を持っているため、ほぼどこでも使用することができます。（もちろんBeanManagerそのものを@Injectでインジェクションすることも可能です）</p>
+<p>CDIと無関係なクラス、MySeviceからBeanManagerを使ってCDIを呼び出してみましょう。</p>
+<pre>public class MyService {
+     public void exec(PrintWriter out){
+          try {
+               <span style="color: #0000ff;">BeanManager bm  = InitialContext.doLookup("java:comp/BeanManager");</span>
+
+               <span style="color: #0000ff;">Set&lt;Bean&lt;?&gt;&gt; beans = bm.getBeans(Person.class);</span>
+               Bean&lt;?&gt; bean = bm.resolve(beans);   // 一意に解決できる場合
+               CreationalContext&lt;?&gt; cc = bm.createCreationalContext(bean);
+               Person person = (Person) bm.getReference(bean, Person.class, cc);
+               out.printf("Person: %s%n", person);
+
+          } catch (NamingException e) {
+               e.printStackTrace();
+          }
+     }
+}</pre>
+<pre class="output">$ curl "http://localhost:8080/cdi/MyServlet2"
+Person: User@cbbe607</pre>
+<p>ちなみにMyServlet2は、普通にnew MyService()してからexec(PrintWriter)を呼び出すだけのサーブレットです。</p>
+<p>CDI管理下のクラスそれぞれに対応する、javax.enterprise.inject.spi.Bean&lt;T&gt;クラスのインスタンスをBeanManagerから取得することができます。スコープやインジェクションポイント、QualifierなどCDIとしての情報はこのBean&lt;T&gt;クラスが保持しています。</p>
+<p>これでどこでもCDIが使えるようになりました。ただこのBeanManagerからPersonを取得するまでのコードは少し冗長ですよね。もともとPortable Extensionで使用するためにあるクラスとは言え、簡易メソッドとしてBeanManager#getReference(Type beanType, Annotation... qualifiers) ぐらいはあってもいい気がするんですが・・・。</p>
+<h3>CDI 1.1</h3>
+<p>ちょっと追記です。現在Public ReviewになっているCDIの次期バージョン、CDI 1.1 (<a href="http://jcp.org/en/jsr/detail?id=346">JSR 346: Contexts and Dependency Injection for Java EE 1.1</a>) を見てみたところ、新しくjavax.enterprise.inject.spi.CDI&lt;T&gt;というクラスが定義される予定になっているようです。このクラスはInstance&lt;T&gt;を実装していて、かつCDI&lt;Object&gt;を返すstaticメソッドcurrent()を持っています。つまり、</p>
+<pre>Person person = CDI.current()
+     .select(Person.class, new DefaultQualifier()).get();</pre>
+<p>などとすれば、Personインターフェースの実装インスタンスを取得することができるようになるということですね。</p>

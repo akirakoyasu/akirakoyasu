@@ -1,0 +1,160 @@
+---
+layout: post
+title: JAX-RSのリファレンス実装、Jerseyの使い方（１）
+date: 2010-11-09 15:14:47.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- JAX-RSのリファレンス実装、Jerseyの使い方
+- Program
+- Java
+- JAX-RS
+- Jersey
+- REST
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_focuskw: ''
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: |-
+    標準のAPIを使ってプログラムを書いておくと色々と都合がいいので、RESTfulなWebサービスを作成しようとするときはJAX-RSを使いたいものです。
+    Apache Tomcat 5.5 と、JAX-RSのリファレンス実装である Jersey 1.4 を使って、単純なRESTサービスを実装する手順を紹介します。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501261976;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:378;}i:1;a:1:{s:2:"id";i:79;}i:2;a:1:{s:2:"id";i:899;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>標準のAPIを使ってプログラムを書いておくと色々と都合がいいので、RESTfulなWebサービスを作成しようとするときはJAX-RSを使いたいものです。</p>
+<p>JavaEE6には初めから入っているJAX-RSですが、現場ではTomcat5.5（もちろんJava5です）とかが頑張っているのでそのままでは使えません。Apache Tomcat 5.5 と、JAX-RSのリファレンス実装である Jersey 1.4 を使って、単純なRESTサービスを実装する手順を紹介します。</p>
+<h3>インストールする</h3>
+<p>まずはJersey1.4のインストールから。Maven2を使っている場合は、java.netのリポジトリを設定します。</p>
+<pre>(pom.xml に以下を追加)
+&lt;repositories&gt;
+    &lt;repository&gt;
+        &lt;id&gt;maven2-repository.dev.java.net&lt;/id&gt;
+        &lt;name&gt;Java.net Repository for Maven&lt;/name&gt;
+        &lt;url&gt;http://download.java.net/maven/2/&lt;/url&gt;
+        &lt;layout&gt;default&lt;/layout&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;</pre>
+<p>サーバアプリケーション側のライブラリは以下です。</p>
+<pre>(pom.xml に以下を追加)
+&lt;dependency&gt;
+    &lt;groupId&gt;com.sun.jersey&lt;/groupId&gt;
+    &lt;artifactId&gt;jersey-server&lt;/artifactId&gt;
+    &lt;version&gt;1.4&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>jarをそのまま使いたい場合は、 http://jersey.java.net/ のDownloadからライブラリをダウンロードしてクラスパスに含めましょう。<!--more--></p>
+<h3>Hello World!</h3>
+<p>入門にはありがちですが、まずは単純に"Hello World!"という文字列を返すだけのRESTサービスを構築してみます。以下のクラスを作成してください。</p>
+<p>jerseytest.resources.HelloworldResource</p>
+<pre>package jerseytest.resources;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+
+@Path("/helloworld")
+public class HelloworldResource {
+	@GET
+	public String getMessage() {
+		return "Hello World!n";
+	}
+}</pre>
+<p>サービスの記述はこれだけです。アノテーションについては後で解説することにしましょう。</p>
+<p>次にweb.xmlにサーブレットの設定をします。</p>
+<pre>&lt;servlet&gt;
+    &lt;servlet-name&gt;JAX-RS Servlet&lt;/servlet-name&gt;
+    &lt;servlet-class&gt;com.sun.jersey.spi.container.servlet.ServletContainer&lt;/servlet-class&gt;
+    &lt;init-param&gt;
+        &lt;param-name&gt;com.sun.jersey.config.property.packages&lt;/param-name&gt;
+        &lt;param-value&gt;jerseytest.resources&lt;/param-value&gt;
+    &lt;/init-param&gt;
+    &lt;load-on-startup&gt;1&lt;/load-on-startup&gt;
+&lt;/servlet&gt;
+&lt;servlet-mapping&gt;
+  &lt;servlet-name&gt;JAX-RS Servlet&lt;/servlet-name&gt;
+  &lt;url-pattern&gt;/rest/*&lt;/url-pattern&gt;
+&lt;/servlet-mapping&gt;</pre>
+<p>jerseyに含まれているサーブレットクラスを指定して、初期化パラメータとしてサービスを記述したクラスのパッケージ名を与えるだけです。</p>
+<p>それではアプリケーションをTomcatに配備して、サービスを参照してみましょう。</p>
+<pre>$ curl "http://localhost:8080/jerseytest/rest/helloworld"
+
+Hello World!</pre>
+<p>おお！ちゃんど文字列が返ってきましたね！</p>
+<h4>アノテーションの解説</h4>
+<p>RESTサービスでは、”サービスはURLで指定されるweb上のリソースである”と考えます。それで先ほどのHelloworldResourceクラスにもResourceと名付けていました。<br />
+そのリソースクラスで使用した２つのアノテーションを説明します。</p>
+<dl>
+<dt>@Path</dt>
+<dd>リソースとしてマークするとともに、サービスを提供するパスを示す。</dd>
+<dt>@GET</dt>
+<dd>HTTPのメソッドのうち、GETでサービスを提供することを示す。</dd>
+</dl>
+<h3>パラメータを受け取る</h3>
+<h4>クエリパラメータ</h4>
+<p>RESTサービスでは、サービスを提供するために必要な引数をURLのクエリパラメータとして受け取ることがあります。クエリパラメータを受け取るリソースクラスを作成してみましょう。</p>
+<p>jerseytest.resources.SayHelloResource</p>
+<pre>package jerseytest.resources;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.QueryParam;
+
+@Path("/sayhello")
+public class SayHelloResource {
+	@GET
+	public String say(@QueryParam("name") String name) {
+		return String.format("Hello %s!%n", name);
+	}
+}</pre>
+<p>では実際にサービスを参照してみます。</p>
+<pre>$ curl "http://localhost:8080/jerseytest/rest/sayhello?name=George"
+
+Hello George!</pre>
+<p>確かにクエリパラメータを受け取ることができていますね。</p>
+<h4>パスパラメータ</h4>
+<p>引数をURLのパスに含めたいこともあるかもしれません。その場合には次のようなコードにします。</p>
+<p>jerseytest.resources.SayHelloResource2</p>
+<pre>package jerseytest.resources;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+
+@Path("/sayhello2/{name}")
+public class SayHelloResource2 {
+
+	@PathParam("name")
+	private String name;
+
+	@GET
+	public String say() {
+		return String.format("Hello %s!%n", name);
+	}
+}</pre>
+<p>今度はプロパティにセットするようにしました。また、@Pathの指定方法にも注目してください。</p>
+<p>サービスを参照すると以下のようになります。</p>
+<pre>$ curl "http://localhost:8080/jerseytest/rest/sayhello2/emily"
+
+Hello emily!</pre>
+<h4>アノテーションの解説</h4>
+<p>新たにパラメータを扱うアノテーションが２つ登場しました。</p>
+<dl>
+<dt>@QueryParam</dt>
+<dd>メソッド変数あるいはプロパティに、指定した名前のクエリパラメータ値をセットすることを示す。</dd>
+<dt>@PathParam</dt>
+<dd>メソッド変数あるいはプロパティに、@Pathに指定したURLパス部分から値を取り出してセットすることを示す。</dd>
+</dl>
+<h3>次回へ</h3>
+<p>ここまでで、サービスの記述とURLとのマッピング、そしてパラメータの取り出しなどが簡単にできることがお分かり頂けたと思います。</p>
+<p>ただ、これまでのところ単純な文字列を返すサービスを構築しただけで、まったく現実的なサービスを提供できたとは言えません。次回はXMLやJSONを返すサービスを構築する手順を紹介しようと思います。</p>

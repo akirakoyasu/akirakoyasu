@@ -1,0 +1,35 @@
+---
+layout: post
+title: s3tools-1.0.0を公開
+date: 2012-03-29 22:33:22.000000000 -05:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Program
+- s3tools
+- AWS
+- CLI
+- Java
+- S3
+- s3tools
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: s3tools-1.0.0を公開します。s3toolsはAmazon S3を操作するための、Java上で動作するコマンドラインツールです。
+  _wpas_skip_2076426: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1499699462;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:742;}i:1;a:1:{s:2:"id";i:873;}i:2;a:1:{s:2:"id";i:593;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>Amazon S3のCLIといえばs3cmdが有名なようですが、API認証の初期設定（--configure）にちょっと違和感を感じます。そこでCLIを自分で書いてみました。これを修正BSDライセンスで公開します。</p>
+<p><a href="/s3tools/">s3tools: Amazon S3 CLI</a></p>
+<p>動作環境はJavaSE6.0以降です。</p>
+<p>まずは最低限必要なコマンドとして、ListとGetとPutの３つだけを用意しました。コマンドもオプションももう少し拡張するつもりです。</p>
+<p>それとまだLinux/Mac用のshスクリプトしか書いていませんが、そのうちWindows用のbatファイルも書こうと思っています。</p>
+<p>内部実装としても今のところクラス設計がとにかくいい加減なので、今後拡張しやすいように改善していく予定です。</p>

@@ -1,0 +1,222 @@
+---
+layout: post
+title: 進化するJavaライブラリ、Guava
+date: 2011-11-14 01:16:43.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Program
+- Google
+- Google code
+- Guava
+- Java
+meta:
+  _edit_last: '1'
+  _aioseop_description: |-
+    GoogleのJavaユーティリティライブラリであるGuavaは、今年9月28日にリリース10.0.0を迎えました。新たなAPIも追加され、更なる進化を遂げています。（執筆時点での最新リリースは10.0.1）
+    今回は、まだベータ版ながら新しく追加された興味深いAPIを４つ紹介します。
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501272378;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:40;}i:1;a:1:{s:2:"id";i:378;}i:2;a:1:{s:2:"id";i:759;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>GoogleのJavaユーティリティライブラリであるGuavaは、今年9月28日にリリース10.0.0を迎えました。新たなAPIも追加され、更なる進化を遂げています。（執筆時点での最新リリースは10.0.1）</p>
+<p>今回は、まだベータ版ながら新しく追加された興味深いAPIを４つ紹介します。<br />
+他のAPIについても、JavaDocなどで@Betaアノテーションがついているものはベータ版ですので、今後のリリースで変更される可能性があります。</p>
+<h3>Stopwatch</h3>
+<p>プログラムの実行時間を計測したいとき、よく使われるコードがあります。</p>
+<pre>long t1 = System.currentTimeMillis();
+
+someExpensiveCompute();
+
+long t2 = System.currentTimeMillis();
+System.out.printf("time: %sms%n", t2 - t1);</pre>
+<p>このt1とかt2とかいう、よくわからない変数は何でしょう？ それに時間を表示するために面倒な引き算をしていますね。Stopwatchを使うとこう書くことができます。</p>
+<pre>Stopwatch stopwatch = new Stopwatch().start();
+
+someExpensiveCompute();
+
+stopwatch.stop();
+System.out.printf("time: %s%n", stopwatch);</pre>
+<p><!--more--></p>
+<h3>Cache</h3>
+<p>キャッシュにまつわる問題は、いつも開発者を悩ませます。キャッシュエントリの数・エントリを削除するタイミング・そしてメモリ・・・。</p>
+<p>そうしたキャッシュの実装を手軽にしてくれるのがcom.google.common.cacheパッケージです。最も単純な使用法は以下のようになります。せっかくなので、実行時間も先ほどのStopwatchを使って計測してみましょう。</p>
+<pre>Cache cache = CacheBuilder.newBuilder()
+		.build(new CacheLoader() {
+			public Object load(String key) {
+				return someExpensiveCompute(key);
+			}
+		});
+
+try {
+	Stopwatch stopwatch = new Stopwatch().start();
+
+	System.out.printf("key0: %s%n", cache.get("key0"));
+
+	System.out.printf("time: %s%n", stopwatch);
+	stopwatch.reset().start();
+
+	System.out.printf("key0: %s%n", cache.get("key0"));
+
+	System.out.printf("time: %s%n", stopwatch);
+
+} catch (ExecutionException e) {
+	e.printStackTrace();
+}</pre>
+<p>このコードを実行すると、例えば以下のような結果になります。</p>
+<pre class="output">key0: 2305843005992468481
+time: 1.794 s
+key0: 2305843005992468481
+time: 201.0 μs</pre>
+<p>１度目の結果がキャッシュされて、２度目の実行コストが節約されているのがわかります。</p>
+<p>このCacheBuilderはいくつかのオプションを備えています。少し大きなオブジェクトをキャッシュするために、エントリの最大数を10にし、かつメモリ不足を予見して値がGCの対象になるようにしてみましょう。</p>
+<pre>Cache cache = CacheBuilder.newBuilder()
+		<span style="color: #ff0000;">.maximumSize(10)</span>
+		<span style="color: #ff0000;">.softValues()</span>
+		.build(new CacheLoader() {
+			public Object load(String key) {
+				return someLargeObject(key);
+			}
+		});
+
+try {
+	// 大きなオブジェクトを４つキャッシュしようとする
+	cache.get("key0");
+	cache.get("key1");
+	cache.get("key2");
+	cache.get("key3");
+
+	Stopwatch stopwatch = new Stopwatch().start();
+
+	cache.get("key3");
+	System.out.println("get key3");
+
+	System.out.printf("time: %s%n", stopwatch);
+	stopwatch.reset().start();
+
+	cache.get("key0");
+	System.out.println("get key0");
+
+	System.out.printf("time: %s%n", stopwatch);
+
+} catch (ExecutionException e) {
+	e.printStackTrace();
+}</pre>
+<p>このコードを実行すると、私のマシンでは以下のような結果になりました。</p>
+<pre class="output">get key3
+time: 29.79 ms
+get key0
+time: 4.229 s</pre>
+<p>エントリの最大数には余裕があるはずですが、値がGCの対象になったため、key0は新しく計算し直されたのです。</p>
+<p>もちろん充分なメモリを与えて実行すれば、結果は以下のように変わります。</p>
+<pre class="output">get key3
+time: 23.54 ms
+get key0
+time: 244.0 μs</pre>
+<h3>Optional</h3>
+<p>Nullオブジェクトの実装です。・・・と、これだけでは説明になっていないので、コードを見ていただきましょう。まずはOptionalを使用しないコードです。</p>
+<p>guavatest.TestOptional1</p>
+<pre>package guavatest;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class TestOptional1 {
+	private static final Map&lt;String, String&gt; map
+			= new HashMap&lt;String, String&gt;();
+	static {
+		map.put("Taro", "Sales");
+		map.put("Jiro", <span style="color: #ff0000;">null</span>);			// 次郎は無職
+		map.put("Saburo", "Engineer");
+	}
+
+	public static void main(String[] args) {
+		String job1 = getJob("Jiro");
+		System.out.printf("What's job of Jiro ?: %s%n", job1);
+
+		String job2 = getJob("Shiro");
+		System.out.printf("What's job of Shiro ?: %s%n", job2);
+	}
+
+	private static String getJob(String name) {
+		return map.get(name);
+	}
+}</pre>
+<p>このコードを実行すると以下の結果が得られます。</p>
+<pre class="output">What's job of Jiro ?: null
+What's job of Shiro ?: null</pre>
+<p>このコードの問題点は、「値が無いことが分かっている」場合と「そもそも分からない」場合との区別が明確にできないところにあります。</p>
+<p>Optionalを使用すると以下のように書くことができます。</p>
+<p>guavatest.TestOptional2</p>
+<pre>package guavatest;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.google.common.base.Optional;
+
+public class TestOptional2 {
+	private static final Map&lt;String, Optional&lt;String&gt;&gt; map
+			= new HashMap&lt;String, Optional&lt;String&gt;&gt;();
+	static {
+		map.put("Taro", Optional.of("Sales"));
+		map.put("Jiro", <span style="color: #ff0000;">Optional.&lt;String&gt;absent()</span>);		// 次郎は無職
+		map.put("Saburo", Optional.of("Engineer"));
+	}
+
+	public static void main(String[] args) {
+		Optional&lt;String&gt; job1 = getJob("Jiro");
+		System.out.printf("What's job of Jiro ?: %s%n",
+				job1 == null? "Unknown":
+				job1.isPresent()? job1: "Nothing");
+
+		Optional&lt;String&gt; job2 = getJob("Shiro");
+		System.out.printf("What's job of Shiro ?: %s%n",
+				job2 == null? "Unknown":
+				job2.isPresent()? job2: "Nothing");
+	}
+
+	private static Optional&lt;String&gt; getJob(String name) {
+		return map.get(name);
+	}
+}</pre>
+<p>このコードを実行すると以下の結果が得られます。</p>
+<pre class="output">What's job of Jiro ?: Nothing
+What's job of Shiro ?: Unknown</pre>
+<h3>Range</h3>
+<p>区間を表すクラスです。端点を含む/含まないなどをすっきりと表すことができます。以下、コードとその実行結果です。※端点を含む区間を閉区間、含まない区間を開区間といいます。</p>
+<pre>// 閉区間 [0,100]
+Range&lt;Integer&gt; range1 = Ranges.closed(0, 100);
+System.out.printf("contains  -1: %s%n", range1.contains(-1));
+System.out.printf("contains   0: %s%n", range1.contains(0));
+System.out.printf("contains 100: %s%n", range1.contains(100));
+System.out.printf("contains 101: %s%n", range1.contains(101));
+
+System.out.println();
+
+// 開区間 (0,100)
+Range&lt;Integer&gt; range2 = Ranges.open(0, 100);
+System.out.printf("contains   0: %s%n", range2.contains(0));
+System.out.printf("contains   1: %s%n", range2.contains(1));
+System.out.printf("contains  99: %s%n", range2.contains(99));
+System.out.printf("contains 100: %s%n", range2.contains(100));</pre>
+<pre class="output">contains  -1: false
+contains   0: true
+contains 100: true
+contains 101: false
+
+contains   0: false
+contains   1: true
+contains  99: true
+contains 100: false</pre>
+<h3>進化をつづけるGuava</h3>
+<p>Guava最初のバージョンであるr01がリリースされたのが2009年9月15日。当時は50程度のクラスしか持たない小さなライブラリでした。それからGoogle Collectionsなどの既存ライブラリも取り込みながら成長し、2年あまりで250を超えるクラスを持つまでになりました。</p>
+<p>ユーティリティライブラリとしては既に必要充分なAPIを備えた感のあるGuavaですが、今後もescape・mathなどのパッケージの追加が予定されているようです。</p>
+<p>洗練されたライブラリは、つまらない繰り返し作業を肩代わりして、開発者の創造的な時間を増やしてくれます。Guavaの今後に期待したいですね。</p>

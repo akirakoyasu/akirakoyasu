@@ -1,0 +1,181 @@
+---
+layout: post
+title: Tokyo CabinetとTokyo Tyrant
+date: 2011-12-11 20:31:52.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Database
+- key-value store
+- Presentation
+- replication
+- Tokyo Cabinet
+- Tokyo Tyrant
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: 勉強会のスライドを基に、Tokyo CabinetとTokyo Tyrantの基本と、まとまった情報の少ないTokyo
+    Tyrantのレプリケーションについて解説・補足します。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501267651;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:873;}i:1;a:1:{s:2:"id";i:487;}i:2;a:1:{s:2:"id";i:378;}}}}
+  _oembed_efd7814b8d953a23f865036afebcc5fa: '<iframe src="http://www.slideshare.net/slideshow/embed_code/10468880"
+    width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"
+    style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen
+    webkitallowfullscreen mozallowfullscreen> </iframe> <div style="margin-bottom:5px">
+    <strong> <a href="http://www.slideshare.net/akirakoyasu/tokyo-cabinet-tokyo-tyrant-10468880"
+    title="Tokyo Cabinet &amp; Tokyo Tyrant" target="_blank">Tokyo Cabinet &amp; Tokyo
+    Tyrant</a> </strong> from <strong><a href="http://www.slideshare.net/akirakoyasu"
+    target="_blank">Akira Koyasu</a></strong> </div>'
+  _oembed_a743c658dc20b9cb9c22dbf7fd7af62a: '<iframe src="http://www.slideshare.net/slideshow/embed_code/10468880"
+    width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"
+    style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen
+    webkitallowfullscreen mozallowfullscreen> </iframe> <div style="margin-bottom:5px">
+    <strong> <a href="http://www.slideshare.net/akirakoyasu/tokyo-cabinet-tokyo-tyrant-10468880"
+    title="Tokyo Cabinet &amp; Tokyo Tyrant" target="_blank">Tokyo Cabinet &amp; Tokyo
+    Tyrant</a> </strong> from <strong><a href="http://www.slideshare.net/akirakoyasu"
+    target="_blank">Akira Koyasu</a></strong> </div>'
+  _oembed_b9987f324642c1f7f42dd2eb60d19f12: '<iframe src="http://www.slideshare.net/slideshow/embed_code/10468880"
+    width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"
+    style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen>
+    </iframe> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/akirakoyasu/tokyo-cabinet-tokyo-tyrant-10468880"
+    title="Tokyo Cabinet &amp; Tokyo Tyrant" target="_blank">Tokyo Cabinet &amp; Tokyo
+    Tyrant</a> </strong> from <strong><a href="http://www.slideshare.net/akirakoyasu"
+    target="_blank">Akira Koyasu</a></strong> </div>'
+  _oembed_f25120a843039f1bfe7541d4e38c24df: '<iframe src="https://www.slideshare.net/slideshow/embed_code/10468880"
+    width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"
+    style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width:
+    100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a
+    href="https://www.slideshare.net/akirakoyasu/tokyo-cabinet-tokyo-tyrant-10468880"
+    title="Tokyo Cabinet &amp; Tokyo Tyrant" target="_blank">Tokyo Cabinet &amp; Tokyo
+    Tyrant</a> </strong> from <strong><a href="http://www.slideshare.net/akirakoyasu"
+    target="_blank">Akira Koyasu</a></strong> </div>'
+  _oembed_time_f25120a843039f1bfe7541d4e38c24df: '1422402332'
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>Tokyo CabinetとTokyo Tyrantについて、社内勉強会のために作ったスライドをSlideShareに公開しました。（スライドはKeynote形式でダウンロード可能です）その解説と補足をしておきます。勉強会の目的は、Tokyo CabinetとTokyo Tyrantを大づかみに理解することと、実際にデータ操作をしてみることでした。</p>
+<p>http://www.slideshare.net/akirakoyasu/tokyo-cabinet-tokyo-tyrant-10468880</p>
+<p>まずはTokyo Cabinet/Tokyo Tyrantとは何なのか、端的に言えば、</p>
+<dl>
+<dt>Tokyo Cabinet</dt>
+<dd>ファイルDB</dd>
+<dt>Tokyo Tyrant</dt>
+<dd>Tokyo Cabinetを内包したサーバ</dd>
+</dl>
+<p>ということになります。（スライド2-8）<!--more--></p>
+<h3>Tokyo Cabinet</h3>
+<p>Tokyo Cabinet（以下TC）はいわゆるkey-valueストアで、４種類のデータ構造を持つことができます。（スライド10-17）</p>
+<dl>
+<dt>hash</dt>
+<dd>拡張子.tchで示されます。１つのkeyに対して１つのvalueを保持する、単純なマップです。</dd>
+<dt>b+ tree</dt>
+<dd>拡張子.tcbで示されます。１つのkeyに対して複数のvalueを保持します。</dd>
+<dt>fixed-length</dt>
+<dd>拡張子.tcfで示されます。hash同様に１つのkeyに対して１つのvalueを保持しますが、「keyは自然数である」「valueは最大長をもつ」という制約があります。</dd>
+<dt>table</dt>
+<dd>拡張子.tctで示されます。１つのkeyに対して、名前付きの複数のvalueを保持します。</dd>
+</dl>
+<h4>Tokyo CabinetのCLI</h4>
+<p>TCはデータ操作のためのCLIを備えています。データ構造によっていくらかの違いはありますが、例えばhashDBを操作する場合は以下のようにします。（スライド18-23）</p>
+<pre># カレントディレクトリに"casket.tch"というファイル名でhashDBを作成する
+tchmgr create casket.tch
+
+# key"hoge"に紐づくvalue"fuga"を挿入する
+tchmgr put casket.tch "hoge" "fuga"
+
+# key"hoge"に紐づくvalueを参照する
+tchmgr get casket.tch "hoge"
+
+# hashDBのkeyを一覧する
+tchmgr list casket.tch
+
+# key"hoge"を削除する
+tchmgr out casket.tch "hoge"</pre>
+<p>これらの他にもいくつかコマンドがありますし、多数のオプションもあります。詳細はmanページを参照してください。</p>
+<h4>Tokyo CabinetのAPI</h4>
+<p>TCの操作はネイティブライブラリとして提供され、また、他のプログラム言語から使用するためのAPIが提供されます。基本的に先ほどのCLI（正確にはネイティブライブラリ）に準ずるメソッド・オプションとなるよう作られています。スライドではJavaAPIの例を挙げています。（スライド25）</p>
+<h3>Tokyo Tyrant</h3>
+<p>Tokyo Tyrant（以下TT）はTCをデータストレージとして使用するDBサーバです。これは実際にサーバを起動してデータ操作をする手順を見ていただきましょう。（スライド28-36）</p>
+<p>まずは１つ目のコンソールでTTを起動します。以下コンソール番号をプロンプトで示します。</p>
+<pre># TTを起動する。（デフォルトポート1978）
+# データストレージにはカレントディレクトリの"casket.tch"を作成/使用する。
+console1:$ ttserver casket.tch</pre>
+<p>２つ目のコンソールでデータ操作を行いましょう。</p>
+<pre># key"hoge"に紐づくvalue"fuga"を挿入する
+console2:$ tcrmgr put localhost "hoge" "fuga"
+# key"hoge2"に紐づくvalue"fuga2"を挿入する
+console2:$ tcrmgr put localhost "hoge2" "fuga2"
+
+# key"hoge"に紐づくvalueを参照する
+console2:$ tcrmgr get localhost "hoge"
+
+# hashDBのkeyを一覧する
+console2:$ tcrmgr list localhost
+
+# key"hoge"を削除する
+console2:$ tcrmgr out localhost "hoge"</pre>
+<p>このデータ操作の部分は、先ほどのTCを直接使う場合とほとんど同じですね。さて今の状態で、DBにはkey"hoge2"が残っているはずです。コンソール１に戻って、TTを停止します。</p>
+<pre>^C</pre>
+<p>ストレージにしていたTCがどうなっているか確認してみましょう。TCを直接操作するので、tcrmgrではなくtchmgrを使用します。</p>
+<pre>console1:$ tchmgr list casket.tch</pre>
+<p>TC上でも、key"hoge2"が残っていることが確認できたはずです。</p>
+<h4>Tokyo TyrantのAPI</h4>
+<p>公式にはPerlとRuby用のAPIが提供されています。Java用のAPIとしては、<a href="http://code.google.com/p/tokyotyrant-java/">tokyotyrant-java</a>が有名です。TCのAPIに似たAPIで操作が可能です。（スライド38）</p>
+<h3>レプリケーション</h3>
+<p>TTはレプリケーション機能を備えています。スライドでは大雑把にしか触れていませんが、レプリケーションについてはまとまった記述がなかなか見つからず苦労したので、ここはスライドから少し離れるところもありますが、詳しく解説しましょう。</p>
+<p>仕組みとしてはMySQLとほぼ同じです。（マネして作った、と作者が書かれていました。）具体的には、</p>
+<ol>
+<li>スレーブサーバはレプリケーションのタイムスタンプを保持しており、それを自身のサーバIDと共にマスタサーバへ通知する。</li>
+<li>マスタサーバは、通知されたタイムスタンプより後、かつ通知されたサーバID以外の更新ログをスレーブへ送信する。</li>
+<li>スレーブサーバは更新ログを適用し、レプリケーションのタイムスタンプを更新する。</li>
+</ol>
+<p>この動作を繰り返してレプリケーションが行われます。（スライド39-42）</p>
+<h4>初めからレプリケーションを開始する場合</h4>
+<p>データが無い初期状態からレプリケーションを行うのは、極めて簡単です。</p>
+<ul>
+<li>マスタサーバではサーバID（-sid）・更新ログディレクトリ（-ulog）を、</li>
+<li>スレーブサーバではサーバID（-sid）・マスタのホスト名（-mhost）・マスタのポート番号（-mport）・タイムスタンプファイルのパス（-rts）を、</li>
+</ul>
+<p>それぞれ指定して起動するだけです。</p>
+<h4>途中からレプリケーションを開始する場合</h4>
+<p>問題はデータが既に存在する場合ですね。仮に、意識的な設定を何もしていないTTが既に稼働していて、突然レプリケーションをしようと思い立ったとしましょう。稼働中のTTをマスタにし、スレーブとなるTTを新たに追加することを考えます。（スライド43-46 ここをとても大雑把にしていますが）</p>
+<h5>１）マスタサーバを設定する</h5>
+<p>一番気になるのはTTを停止する必要があるのかどうか、というところです。TT起動時のオプションを確認し、不幸にしてサーバID（-sid）と更新ログディレクトリ（-ulog）とが指定されていなかった場合は、TTを一度停止する必要があります。そして例えば以下のようなオプションを追加して再起動します。以降、マスタ／スレーブでの操作をプロンプトで示します。</p>
+<pre># 更新ログディレクトリを作成
+master:$ mkdir /path/to/ulog
+# TTを起動
+master:$ ttserver -sid 1 -ulog /path/to/ulog /path/to/casket.tch</pre>
+<p>これでまずはマスタとなるTTが手に入りました。</p>
+<h5>２）DBファイルをコピーする</h5>
+<p>次はDBファイルのスナップショットを作成します。先ほど説明したように、レプリケーションの鍵になるのはタイムスタンプです。DBファイルのコピーをとると同時に、そのDBファイルのタイムスタンプを知る必要があります。</p>
+<p>そのためにはコピーのためのシェルスクリプトをマスタサーバに用意し、TTの実行ユーザに実行権限を与えます。</p>
+<pre>master:$ cat ttcopy.sh
+#!/bin/sh
+SRCPATH="$1"
+DSTPATH="$SRCPATH.$2"
+cp -f "$SRCPATH" "$DSTPATH"</pre>
+<p>その上で以下のコマンドを発行すると、マスタサーバ上にDBファイルのコピーが作成されます。コピー中はTT全体がロックされることに注意してください。</p>
+<pre>someconsole:$ tcrmgr copy master.host '@/path/to/ttcopy.sh'</pre>
+<pre>master:$ ls -l /path/to/dbdir/
+-rw-r--r-- 1 ttserver ttserver 528704 12 11 18:40 casket.tch
+-rw-r--r-- 1 ttserver ttserver 528704 12 11 18:40 casket.tch.1323596455089588</pre>
+<p>元のDBファイル名に数字が付いたファイルが出来ていますね。この数字がDBファイルのタイムスタンプです。</p>
+<h5>３）スレーブサーバを起動する</h5>
+<p>先ほどコピーしたDBファイルをスレーブサーバに移動させ、タイムスタンプファイルを作成します。</p>
+<pre># DBファイルの末尾についたタイムスタンプを.rtsファイルに書く
+slave:$ echo "1323596455089588" &gt; slave.rts
+
+# DBファイル名からタイムスタンプを除去する
+slave:$ mv casket.tch.1323596455089588 casket.tch</pre>
+<p>そして例えば以下のようなオプションを付けて、スレーブとなるTTを起動します。</p>
+<pre>slave:$ ttserver -sid 2 -mhost master.host -mport 1978 
+        -rts /path/to/slave.rts /path/to/casket.tch</pre>
+<p>これでレプリケーションが開始されました。</p>
+<h3>まとめ</h3>
+<p>今回はスライドを基にTokyo CabinetとTokyo Tyrantの基本と、まとまった情報の少ないTokyo Tyrantのレプリケーションについて解説・補足しました。他のkey-valueストアについても言えることですが、（あくまでRDBMSではないという意味で）限定された状況下では高いパフォーマンスを発揮します。使いどころ次第で便利に使えます。</p>
+<p>ところで、昨年５月にTokyo Cabinetの後継となる<a title="Kyoto Cabinet 1.0.0リリース！" href="http://alpha.mixi.co.jp/blog/?p=1969">Kyoto Cabinetがリリース</a>されています。Tokyo製品群についても継続してメンテナンスはしていくと表明されているので、まだしばらくは使っていても大丈夫でしょう。機会（と時間）があればKyoto製品群にも触れてみようと思っています。</p>

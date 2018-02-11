@@ -1,0 +1,57 @@
+---
+layout: post
+title: JavaOne 2012 San Francisco レポート（２日目）
+date: 2012-10-01 22:48:27.000000000 -05:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- JavaOne
+- Program
+- Java
+- JavaOne
+- JMS
+- JPA
+- San Francisco
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: 2012年9月30日（金）から10月4日（木）までの５日間、米国サンフランシスコでJavaOneが開催されました。その第２日目の様子をレポートします。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1499921825;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:562;}i:1;a:1:{s:2:"id";i:618;}i:2;a:1:{s:2:"id";i:702;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<h3>JPA2.1でインデックス・外部キーを扱えるように</h3>
+<p>[caption id="attachment_599" align="alignright" width="1000"]<img class=" wp-image-599  " title="Taylor street" alt="Taylor street" src="{{ site.baseurl }}/assets/javaone2012sf_04_taylor-street.png" width="1000" height="750" /> 街のいたるところにJavaOneの文字が[/caption]</p>
+<p>2012年10月1日（月）：２日目からは、３つのホテルでセッションが開かれました。だいたい１日あたり６コマくらい参加したのですが、私個人としてはこの２日目は少し外したなというか、選択を誤ったなと思うセッションの多い日でした。</p>
+<p>数多くのセッションの中から、自分が本当に聴きたい内容のセッションを選び出すのは、実はかなり根気のいる作業です。<br />
+セッションの一覧には予めタイトルと説明が付けられているので、本来はそれらをよく読んだ上で選択すべきなのですが、私はそこを端折って取りあえずセッションのタイトルだけを見て、それらしいものを選定していったのでした。 <!--more--></p>
+<h3>What's new in Java Message Service 2.0?</h3>
+<p>JMS1.1では単純なメッセージの送信だけで、13行ものコードを書く必要がありました。しかもそのコードの大部分はボイラープレートコードと呼ばれる、決まりきったものでした。そこでJMS2.0では、シンプルに使いやすくすることを目標にしています。</p>
+<ol>
+<li>まず新しいAPIを定義して、メッセージの送受信が単純なメソッドの呼び出しでも行えるようにしました</li>
+<li>更にJavaEE6で導入されたCDIを使用して、コンテキストオブジェクトがDIされるようにしました</li>
+</ol>
+<p>これで単純なメッセージの送信だけであれば、わずか3行ほどのコードで実装することが可能になります。</p>
+<p>他にも非同期送信やアノテーションによるリソースクラスの定義など、いくつかの機能が追加されています。</p>
+<h3>Java Persistence 2.1: What's New</h3>
+<p>JPA2.1について、JavaEE7のスペックリード、デミシェルさんのセッションでした。</p>
+<p>まず大きなトピックとしては、新しいアノテーション @Index, @ForeignKey により、文字通りインデックスと外部キーを扱えるようになることが挙げられます。</p>
+<p>その他、以下が主な変更点と言えるでしょう。</p>
+<ul>
+<li>不同期コンテキストが導入され、JTAと連動しない永続化が可能になります</li>
+<li>また、属性毎にコンバータを定義することができるようになり、より柔軟なマッピングが可能になります</li>
+<li>コンテナレベル，アプリケーションレベルでのマルチテナンシーをサポートします</li>
+</ul>
+<div class="series javaone-report">
+<p>JavaOne 2012 San Francisco レポート</p>
+<ul>
+<li class="previous"><a title="JavaOne 2012 San Francisco レポート（１日目）" href="/2012/09/30/javaone-2012-sf-report-1st-day/">前を見る »</a></li>
+<li class="next"><a title="JavaOne 2012 San Francisco レポート（３日目）" href="/2012/10/02/javaone-2012-sf-report-3rd-day/">« 次を見る</a></li>
+</ul>
+</div>

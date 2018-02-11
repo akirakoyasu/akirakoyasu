@@ -1,0 +1,119 @@
+---
+layout: post
+title: JAXBの簡単な解説（１）
+date: 2011-02-27 16:34:52.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- JAXBの簡単な解説
+- Program
+- Java
+- JAXB
+- XML
+- XML Schema
+meta:
+  _edit_last: '1'
+  _aioseop_description: |-
+    JavaオブジェクトからXMLへ変換したい、またはXMLからJavaオブジェクトへ変換したい、ということはよくあるものです。
+    方法はいくつか考えられますが、JavaSE6 にある標準技術 JAXB (Java Architecture for XML Binding) では、この変換を手軽に実装できるようになっています。その使い方を解説しようと思います。
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501293164;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:378;}i:1;a:1:{s:2:"id";i:487;}i:2;a:1:{s:2:"id";i:79;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<h3>JavaとXML間のバインディングを行うJAXB</h3>
+<p>JavaオブジェクトからXMLへ変換したい、またはXMLからJavaオブジェクトへ変換したい、ということはよくあるものです。</p>
+<p>方法はいくつか考えられますが、JavaSE6 にある標準技術 JAXB (Java Architecture for XML Binding) では、この変換を手軽に実装できるようになっています。その使い方を解説しようと思います。</p>
+<h3>JAXBの考え方</h3>
+<p>まずはJAXBの考え方を俯瞰しておきます。</p>
+<p style="text-align: center;"><img class=" wp-image-49 article aligncenter" title="JAXB" alt="" src="{{ site.baseurl }}/assets/JAXB.gif" width="401" height="331" /><!--more--></p>
+<p>図のように、JavaクラスとXML Schemaとが対応するものと考えます。言われてみればもっともな話で、実体としてJavaオブジェクト・XML文書があり、その雛形としてJavaクラス・XML Schemaがあるということですね。</p>
+<p>ここから分かる通り、JAXBの出発点はJavaクラスかXML Schemaになります。どちらから始めても実装可能です。</p>
+<h3>JavaオブジェクトからXMLへの変換</h3>
+<p>まずはごくごく単純なデータ構造として「会社」と「従業員」を使うことにし、</p>
+<p><em>会社（従業員*）</em><br />
+<em> 従業員（名前，給料）</em></p>
+<p>とします。ありがちですいません。これをJavaクラスにするとおそらく以下のようになるでしょう。何ということはない、ごく普通のJavaクラスです。</p>
+<p>Companyクラス</p>
+<pre>public class Company {
+	private List&lt;Employee&gt; employees;
+
+	public List&lt;Employee&gt; getEmployees() {
+		return employees;
+	}
+
+	public void setEmployees(List&lt;Employee&gt; employees) {
+		this.employees = employees;
+	}
+}</pre>
+<p>Employeeクラス</p>
+<pre>public class Employee {
+	private String name;
+	private int salary;
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getSalary() {
+		return salary;
+	}
+
+	public void setSalary(int salary) {
+		this.salary = salary;
+	}
+}</pre>
+<p>次に、このクラスのオブジェクトをXMLに変換するプログラムがどうなるか見てみます。</p>
+<p>※ なお、JAXB関連のクラスは javax.xml.bind 以下のパッケージに入っています。</p>
+<pre>public class Sample1 {
+
+	public static void main(String[] args) {
+		// 会社
+		Company c = new Company();
+
+		// ２人の従業員
+		List&lt;Employee&gt; employees = new ArrayList&lt;Employee&gt;();
+
+		Employee e1 = new Employee();
+		e1.setName("taro");
+		e1.setSalary(1000);
+		employees.add(e1);
+
+		Employee e2 = new Employee();
+		e2.setName("hanako");
+		e2.setSalary(800);
+		employees.add(e2);
+
+		c.setEmployees(employees);
+
+		// マーシャル
+		<span style="color: #ff0000;">JAXB.marshal(c, System.out);</span>
+	}
+}</pre>
+<p>特別なことは何もしていません。ただJAXB#marshal()を呼んでいるだけです。</p>
+<p>これを実行すると、以下のような出力が得られるはずです。</p>
+<pre class="output">&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;
+&lt;company&gt;
+    &lt;employees&gt;
+        &lt;name&gt;taro&lt;/name&gt;
+        &lt;salary&gt;1000&lt;/salary&gt;
+    &lt;/employees&gt;
+    &lt;employees&gt;
+        &lt;name&gt;hanako&lt;/name&gt;
+        &lt;salary&gt;800&lt;/salary&gt;
+    &lt;/employees&gt;
+&lt;/company&gt;</pre>
+<p>これで一応JavaオブジェクトからXMLへの変換はできたことになります。</p>
+<h3>次回へ</h3>
+<p>出力されたXMLをよく見ると従業員の要素名が「employee<strong>s</strong>」になっています。これは少し嫌なので調整したいですね。そのためにはアノテーションを使ってバインディングを変更する必要があります。</p>
+<p>また、JavaクラスとXML Schemaとが対応すると言っておきながら、XML Schemaが一度も登場していません。このあたりを併せて次回に解説しようと思います。</p>

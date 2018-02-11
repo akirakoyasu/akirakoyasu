@@ -1,0 +1,80 @@
+---
+layout: post
+title: MySQLのレプリケーションを監視するシェルスクリプト
+date: 2010-12-30 23:35:52.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Database
+- MySQL
+- replication
+- shell script
+meta:
+  _edit_last: '1'
+  _yoast_wpseo_focuskw: ''
+  _wp_old_slug: '17'
+  _yoast_wpseo_title: ''
+  _yoast_wpseo_metadesc: ''
+  _yoast_wpseo_meta-robots-noindex: '0'
+  _yoast_wpseo_meta-robots-nofollow: '0'
+  _yoast_wpseo_meta-robots-adv: none
+  _yoast_wpseo_canonical: ''
+  _yoast_wpseo_redirect: ''
+  _aioseop_description: SHOW SLAVE STATUSG でスレーブの状態をチェックして、問題がありそうな場合はメールを送信するスクリプトのメモです。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501165425;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:759;}i:1;a:1:{s:2:"id";i:341;}i:2;a:1:{s:2:"id";i:797;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>SHOW SLAVE STATUSG でスレーブの状態をチェックして、問題がありそうな場合はメールを送信するスクリプトのメモです。</p>
+<p>意図としては、</p>
+<ul>
+<li>スレーブプロセスが走ってるか</li>
+<li>エラーが起きてないか</li>
+<li>遅延が許容範囲内か（30秒）</li>
+</ul>
+<p>ちなみにMySQLそのものに接続できないとかの場合はこのスクリプトでは対応できません。</p>
+<pre>#! /bin/sh
+#
+# watch replication
+#
+
+ALERT_TO="{mail-destination}";
+ALERT_SUBJECT="[MySQL] replication alert";
+
+CHECK_COMMAND="SHOW SLAVE STATUS\G";
+ALLOW_DELAY_SECONDS=30;
+
+echo "$CHECK_COMMAND";
+slave_status=`mysql -u {user} -e "$CHECK_COMMAND"`;
+echo "$slave_status";
+
+# set variables from status
+eval "`echo "$slave_status" | sed -ne 's/: (.*)/="1"/p'`";
+
+if [ "$Slave_IO_Running" != "Yes"  ]; then
+    msg="Slave_IO_Running : $Slave_IO_Runningn";
+fi
+
+if [ "$Slave_SQL_Running" != "Yes" ]; then
+    msg="${msg}Slave_SQL_Running : $Slave_SQL_Runningn";
+fi
+
+if [ "$Last_Errno" != "0" ]; then
+    msg="${msg}Last_Error : [${Last_Errno}] $Last_Errorn";
+fi
+
+if [ "$Seconds_Behind_Master" -gt $ALLOW_DELAY_SECONDS ]; then
+    msg="${msg}Seconds_Behind_Master : $Seconds_Behind_Mastern";
+fi
+
+if [ "$msg" != "" ]; then
+    echo "n-- Need alert mail --";
+    echo "$msg";
+    (echo "${msg}n${CHECK_COMMAND}n${slave_status}" | mailx -s "$ALERT_SUBJECT" "$ALERT_TO");
+fi</pre>

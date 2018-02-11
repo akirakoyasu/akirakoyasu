@@ -1,0 +1,55 @@
+---
+layout: post
+title: JavaOne 2012 San Francisco レポート（３日目）
+date: 2012-10-02 22:18:58.000000000 -05:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- JavaOne
+- Program
+- Java
+- JavaOne
+- Jigsaw
+- Lambda
+- San Francisco
+meta:
+  _edit_last: '1'
+  _aioseop_description: 2012年9月30日（金）から10月4日（木）までの５日間、米国サンフランシスコでJavaOneが開催されました。その第３日目の様子をレポートします。
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1500992743;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:593;}i:1;a:1:{s:2:"id";i:562;}i:2;a:1:{s:2:"id";i:702;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<h3>JavaSE8のLambda，JavaSE9のJigsaw</h3>
+<p>2012/10/02（火）：３日目は、JavaSEのセッションを中心に参加しました。<br />
+JavaOneのセッションは、サンフランシスコ ユニオンスクエアにある３つのホテル、Hilton, Parc55, Nikkoで開かれており、HiltonではJavaSE、Parc55ではJavaEE、NikkoではJavaME関連のセッションが主です。私はMEはさっぱりなのでHiltonとParc55にしか足を踏み入れませんでしたが、Nikkoも少し覗いておけばよかったかなと思っています。</p>
+<p>[caption id="attachment_619" align="alignright" width="1000"]<img class=" wp-image-619    " title="Hilton San Francisco Union Square" alt="Hilton San Francisco Union Square" src="{{ site.baseurl }}/assets/javaone2012sf_05_hilton.png" width="1000" height="750" /> 主にJavaSE関連のセッションが開かれた<br />Hilton San Francisco Union Square[/caption]</p>
+<p><!--more--></p>
+<h3>Jump-Starting Lambda Programming</h3>
+<p>これはとても楽しいセッションでした。</p>
+<p>Lambdaの導入に至る自然な流れとして</p>
+<ol>
+<li>振る舞いを引数として与えること</li>
+<li>増え過ぎたボイラープレートコードの除去</li>
+<li>Fluent API（パイプライン）の使用</li>
+</ol>
+<p>これを簡単で巧く作られたプログラミング例から説明していました。</p>
+<p>私の記憶では、コレクションAPIへ追加する必要のあるメソッドはIterableに追加することになっていたはずですが、Iterableに直接メソッドを多数追加するのを止め、新しいクラス、Streamを使うことになったようです。シーケンシャルに処理を行う場合はstream()、パラレルに処理を行う場合はparalell()をコールしてパイプライン処理を開始します。</p>
+<h3>The Modular Java Platform and Project Jigsaw</h3>
+<p>JavaSE8のスペックリード、レインホールドさんのセッション。</p>
+<p>module-info.javaに関して、新しくexports, viewsが定義される予定だそうです。<br />
+その他は内容的に大きく変化があったわけではないため、リリースがJavaSE8からJavaSE9へ見送られたことなど，既知の話題が大半でした。</p>
+<p>キーノートで失敗した、Jigsawでモジュール化されたJavaFXアプリケーションをRaspberry Piにインストール・起動するデモに、このセッションで再チャレンジ。一度目はうまく行かずモジュールリポジトリを作り直したりしていましたが、最終的には起動に成功し、安堵（？）のどよめきと拍手が起こりました。</p>
+<div class="series javaone-report">
+<p>JavaOne 2012 San Francisco レポート</p>
+<ul>
+<li class="previous"><a title="JavaOne 2012 San Francisco レポート（２日目）" href="/2012/10/01/javaone-2012-sf-report-2nd-day/">前を見る »</a></li>
+<li class="next"><a title="JavaOne 2012 San Francisco レポート（４日目）" href="/2012/10/03/javaone-2012-sf-report-4th-day/">« 次を見る</a></li>
+</ul>
+</div>

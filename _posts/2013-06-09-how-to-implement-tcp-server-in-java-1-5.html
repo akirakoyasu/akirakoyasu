@@ -1,0 +1,99 @@
+---
+layout: post
+title: Javaで作るTCPサーバ（１.５）
+lead: Javaで作るTCPサーバの1回目の補足です。ServerSocketChannelをブロッキングモードで使う場合の実装をご紹介します。
+date: 2013-06-09 03:15:12.000000000 -05:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Javaで作るTCPサーバ
+- Program
+- Java
+- ServerSocketChannel
+- Socket
+- TCP
+meta:
+  _jetpack_related_posts_cache: a:1:{s:32:"ebe7ee7f4e58fee5582ec390fd556983";a:2:{s:7:"expires";i:1501171594;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:702;}i:1;a:1:{s:2:"id";i:873;}i:2;a:1:{s:2:"id";i:929;}}}}
+  _edit_last: '1'
+  _wp_old_slug: java%e3%81%a7%e4%bd%9c%e3%82%8btcp%e3%82%b5%e3%83%bc%e3%83%90%ef%bc%88%ef%bc%91-%ef%bc%95%ef%bc%89
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>こんばんは。梅雨に入ったというのに、全然雨が降らないですね。天気がいいのはとりあえず洗濯物にとってはいいことですが、あんまり降らないようだと今度は夏の水不足が心配になってきます。</p>
+<p>ところで今日は<a title="Javaで作るTCPサーバ（１）" href="http://www.akirakoyasu.net/2013/04/21/how-to-implement-tcp-server-in-java/">前回</a>の続きというか補足をします。最初はノンブロッキングAPIを使う方法を書くつもりでしたが、ちょっと気が変わりました（笑）。</p>
+<h3>ブロッキングモードとノンブロッキングモード</h3>
+<p>前回も少し触れた通り、ソケット通信を扱う方法として、ブロッキングモードとノンブロッキングモードというものがあります。簡単に言えば通信をする際にいちいちブロックするのがブロッキングモード、ブロックしないのがノンブロッキングモードです。</p>
+<p>・・・それではあまり説明になっていないのでもう少し詳しく言いましょう。ネットワーク越しにデータを読み取ろうとしたり書き込もうとしたりする場合、それ相応の遅延が発生します。その遅延時間をどうするのかという違いがブロッキングモードとノンブロッキングモードの違いです。</p>
+<dl>
+<dt>ブロッキングモード</dt>
+<dd>読み込みや書き込みを完了するまで待ちます。つまりコード上、readやwriteのメソッドをコールすると完了するまで制御はブロックします。</dd>
+<dt>ノンブロッキングモード</dt>
+<dd>「今できる処理だけをする」ことを基本にします。つまりコード上、readやwriteのメソッドをコールすると今読み取れるデータのみをreadし、或は今書き込めるデータのみをwriteして、すぐに制御が戻ります。</dd>
+</dl>
+<p>前回 Java SE 7 においてサーバソケットを扱う方法は３通りあると言いました。クラス名でいうなら、</p>
+<ul>
+<li>java.net.ServerSocket</li>
+<li>java.nio.channels.ServerSocketChannel</li>
+<li>java.nio.channels.AsynchronousServerSocketChannel</li>
+</ul>
+<p>この３通りです。前回使った ServerSocket はブロッキングモードで処理をします。２番目の ServerSocketChannel はブロッキングモードとノンブロッキングモードのどちらでも処理をすることができます。加えて効率の良いChannelクラスを使って読み書きできますので、ブロッキングモードで処理したい場合であってもJDK1.4以上の環境ならば、ServerSocket より ServerSocketChannel を使用することを考えた方がよいと思います。</p>
+<!--more-->
+<h3>java.nio.channels.ServerSocketChannel をブロッキングモードで使う</h3>
+<p>というわけで、前回の ServerSocket を ServerSocketChannel に置き換えて、ブロッキングモードで処理してみましょう。</p>
+<pre>try (ServerSocketChannel listener = ServerSocketChannel.open();) {
+    listener.setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE);
+    listener.bind(new InetSocketAddress(8080));
+    System.out.println("Server listening on port 8080...");
+    while (true) {
+        try (SocketChannel channel = listener.accept();) {
+            System.out.printf("ACCEPT %s%n", channel);
+            Bytes.copy(channel, channel);
+            System.out.printf("CLOSE %s%n", channel);
+        }
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}</pre>
+<p style="text-align: right;"><img alt="GitHub" src="{{ site.baseurl }}/assets/GitHub-Mark-32px.png" width="16" height="16" /> <a href="https://github.com/akirakoyasu/blog/blob/master/src/net/ak/server/ChannelServer.java">完全なコード</a></p>
+<p>んん？ あまり変わっていないような・・・？ その通りです。ブロッキングモードで処理する場合、だいたい似たようなコードを書けばよいのです。ちなみに前回説明を省略しましたが、Bytes#copy()というメソッドはJDKには（今のところ）ありません。以下のようなシグネチャのメソッドを想定しています。</p>
+<pre>Bytes#copy(ReadableByteChannel from, WritableByteChannel to);
+Bytes#copy(InputStream from, OutputStream to);</pre>
+<p>ソケットは読み込みも書き込みもできますので、SocketChannel も ReadableByteChannel と WritableByteChannel を両方実装しているというわけです。</p>
+<h3>再びスレッド化する</h3>
+<p>さて上記のコードは前回と同じく１対１で通信するコードになっています。なのでやはりスレッド化したコードも掲げておきます。</p>
+<pre>ExecutorService worker = Executors.newCachedThreadPool();
+try (ServerSocketChannel listener = ServerSocketChannel.open();) {
+    listener.setOption(StandardSocketOptions.SO_REUSEADDR, Boolean.TRUE);
+    listener.bind(new InetSocketAddress(8081));
+    System.out.println("Server listening on port 8081...");
+    while (true) {
+        final SocketChannel _channel = listener.accept();
+        System.out.printf("ACCEPT %s%n", _channel);
+        worker.submit(new Runnable() {
+            @Override
+            public void run() {
+                try (SocketChannel channel = _channel;) {
+                    Bytes.copy(channel, channel);
+                    System.out.printf("CLOSE %s%n", channel);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+} finally {
+    worker.shutdown();
+}</pre>
+<p style="text-align: right;"><img alt="GitHub" src="{{ site.baseurl }}/assets/GitHub-Mark-32px.png" width="16" height="16" /> <a href="https://github.com/akirakoyasu/blog/blob/master/src/net/ak/server/ThreadedChannelServer.java">完全なコード</a></p>
+<p>これもほとんど同じですね。</p>
+<p>それでは次回はいよいよ、ServerSocketChannel をノンブロッキングモードで使ってみたいと思います。</p>
+<p>そういえば今週はJava EE 7のリリースがあります。私も<a title="Join Oracle and 9 Million Developers to Make  the Future Java" href="http://www.oracle.com/us/dm/h2fy11/176959-wwmk12063011mpp001c003-oem-1947364.html">オンラインのローンチイベント</a>に参加登録しています。昼間は参加が難しそうなので、深夜の部かあるいは、あとでYouTubeを見るとかそんな感じになるかもしれませんが・・・。</p>

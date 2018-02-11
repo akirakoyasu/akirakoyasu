@@ -1,0 +1,120 @@
+---
+layout: post
+title: lucene-gosenで形態素解析
+date: 2011-11-27 00:54:03.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Program
+- Java
+- lucene-gosen
+- Morphological Analysis
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: Javaから使える形態素解析ライブラリの一つにlucene-gosenがあります。特徴として、多くの形態素解析ライブラリがJNIを使用するのに対し、lucene-gosenはJavaで完結していることが挙げられます。JNIを使用したくない／使用できない環境（Google
+    App Engine  - GAE/J など）でも使うことができます。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501269453;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:759;}i:1;a:1:{s:2:"id";i:797;}i:2;a:1:{s:2:"id";i:217;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>形態素解析とは、文を最小の意味を持つ単位（形態素）に分解して、それぞれの形態素の品詞等を判別することを言います。今日はJavaで形態素解析をしてみましょう。</p>
+<p>Javaから使える形態素解析ライブラリの一つに<a href="http://code.google.com/p/lucene-gosen/">lucene-gosen</a>があります。特徴として、多くの形態素解析ライブラリがJNIを使用するのに対し、lucene-gosenはJNIを使用せず、Javaで完結していることが挙げられます。JNIを使用したくない／使用できない環境、例えばGoogle App Engine(GAE/J)などでも使うことができます。</p>
+<h3>準備</h3>
+<p>準備はごく簡単です。プロジェクトのWebページから、辞書付きのjar（naist-chasenかipadic、どちらでも構いません）をダウンロードしてクラスパスに含めるだけです。</p>
+<p>参考までに、現行バージョンは1.2.0でした。<!--more--></p>
+<h3>解析</h3>
+<p>早速使ってみましょう。コードは以下のようになります。</p>
+<pre>StringTagger tagger = SenFactory.getStringTagger(null);
+try {
+	List&lt;Token&gt; list = new ArrayList&lt;Token&gt;();
+	list = tagger.analyze("すもももももももものうち", list);
+
+	for (Token token : list) {
+		System.out.println("======================================");
+		System.out.printf("surface: %s%n", token.getSurface());
+		System.out.printf("start: %s, length: %s%n", token.getStart(), token.getLength());
+		System.out.printf("cost: %s%n", token.getCost());
+		Morpheme morpheme = token.getMorpheme();
+		System.out.printf("basicForm: %s%n", morpheme.getBasicForm());
+		System.out.printf("cForm: %s, cType: %s%n",
+				morpheme.getConjugationalForm(), morpheme.getConjugationalType());
+		System.out.printf("partOfSpeech: %s%n", morpheme.getPartOfSpeech());
+		System.out.printf("pron: %s, read: %s%n",
+				morpheme.getPronunciations(), morpheme.getReadings());
+		System.out.printf("additionalInfo: %s%n", morpheme.getAdditionalInformation());
+	}
+} catch (IOException e) {
+	e.printStackTrace();
+}</pre>
+<p>これを実行すると以下の出力が得られます。</p>
+<pre class="output">======================================
+surface: すもも
+start: 0, length: 3
+cost: 4636
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 名詞-一般
+pron: [スモモ], read: [スモモ]
+additionalInfo: null
+======================================
+surface: も
+start: 3, length: 1
+cost: 6038
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 助詞-係助詞
+pron: [モ], read: [モ]
+additionalInfo: null
+======================================
+surface: もも
+start: 4, length: 2
+cost: 10311
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 名詞-一般
+pron: [モモ], read: [モモ]
+additionalInfo: null
+======================================
+surface: も
+start: 6, length: 1
+cost: 11713
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 助詞-係助詞
+pron: [モ], read: [モ]
+additionalInfo: null
+======================================
+surface: もも
+start: 7, length: 2
+cost: 15986
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 名詞-一般
+pron: [モモ], read: [モモ]
+additionalInfo: null
+======================================
+surface: の
+start: 9, length: 1
+cost: 16655
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 助詞-連体化
+pron: [ノ], read: [ノ]
+additionalInfo: null
+======================================
+surface: うち
+start: 10, length: 2
+cost: 18621
+basicForm: *
+cForm: *, cType: *
+partOfSpeech: 名詞-非自立-副詞可能
+pron: [ウチ], read: [ウチ]
+additionalInfo: null</pre>
+<p>おお、うまく解析できましたね！</p>

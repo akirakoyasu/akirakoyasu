@@ -1,0 +1,104 @@
+---
+layout: post
+title: How to implement TCP server in Java (1)
+date: 2013-04-21 00:48:14.000000000 -05:00
+type: post
+published: true
+status: publish
+categories: []
+tags: []
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: Describing how to implement TCP server in Java. In this first
+    time, let's try implementing it using "an ordinary socket API," java.net.ServerSocket.
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"e68a15120e1b7ba9e7511c132cd6b428";a:2:{s:7:"expires";i:1500989942;s:7:"payload";a:0:{}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>In these days I feel comfortable Spring, but it has been suddenly very cold from last week. That's why I have a sore throat.</p>
+<p>By the way, I don't know why, but I have to implement a server from scratch using sockets recently. So I write about how to implement TCP server in Java, in addition to organizing my ideas.</p>
+<h3>Handling server sockets in Java</h3>
+<p>There are three ways to handle server sockets in Java SE 7.</p>
+<ul>
+<ul>
+<li>First, it's what is called "an ordinary socket API". We have had it since JDK 1.0, (or this the good old API have existed since 1996) and it's to use java.net.ServerSocket.</li>
+<li>Second, there is another which handle socket in called "Non-blocking" mode. It's mainly to use ServerSocketChannel and Selector in java.nio.channels package. It's added in JDK 1.4.</li>
+<li>And last, there is the last one which handle socket asynchronously. It's mainly to use AsynchronousServerSocketChannel in java.nio.channels package, too. It's added in JDK 1.7</li>
+</ul>
+</ul>
+<p><!--more--></p>
+<h3>To use java.net.ServerSocket</h3>
+<p>At first we should start from basic point. Let's try writing echo-server using ordinary socket API that was already active when I was high school student. Although it's called "ordinary socket API", the others also handle "ordinary socket" but in defferent way.</p>
+<p>This API is very simple. See following code.</p>
+<pre>try (ServerSocket listener = new ServerSocket();) {
+    listener.setReuseAddress(true);
+    listener.<span style="color: #0000ff;">bind</span>(new InetSocketAddress(8080));
+    System.out.println("Server listening on port 8080...");
+    while (true) {
+        try (Socket socket = listener.<span style="color: #0000ff;">accept</span>();) {
+            InputStream from = socket.getInputStream();
+            OutputStream to = socket.getOutputStream();
+            Bytes.copy(from, to);
+        }
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}</pre>
+<p>The proccess is,</p>
+<ol>
+<li>To instantiate a ServerSocket and bind to a port.</li>
+<li>Waiting for an incomming connection from the client, (or the thread is blocked at the method ServerSocket#accept() calling) and obtain a Socket by ACCEPTing the connection.</li>
+<li>To do something over the Socket's streams.</li>
+<li>Closing the Socket.</li>
+<li>Continuing from waiting for new connection.</li>
+</ol>
+<p>Then, run this.</p>
+<pre>$ java SocketServer
+Server listening on port 8080...</pre>
+<p>Good, our server is running. Let's try connecting from another terminal.</p>
+<pre>$ telnet localhost 8080
+Trying ::1...
+Connected to localhost.
+Escape character is '^]'.</pre>
+<p>It's OK. Now we have a connection to our server. Input something to the terminal, and get output as is. Congratulations! ...But this server has a big problem.</p>
+<h3>Multithreading</h3>
+<p>The problem is that the server can handle only one connection at the same time. To get it, connect from some terminals. The others' connections are not handled unless one's is closed.</p>
+<p>That's because we handle a Socket one by one in the previous code. Therefore, we make it multithreaded.</p>
+<pre>ExecutorService worker = Executors.newCachedThreadPool();
+try (ServerSocket listener = new ServerSocket();) {
+    listener.setReuseAddress(true);
+    listener.bind(new InetSocketAddress(8081));
+    System.out.println("Server listening on port 8081...");
+    while (true) {
+        final Socket socket = listener.accept();
+        worker.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    InputStream from = socket.getInputStream();
+                    OutputStream to = socket.getOutputStream();
+                    Bytes.copy(from, to);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        });
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+} finally {
+    worker.shutdown();
+}</pre>
+<p>It's done. Now we have a very practical echo-server which is able to handle connections at the same time.</p>
+<p>Do you have peace of mind? It's too early. Remember that there are the two other ways to handle server sockets. They have some good points which this "ordinary socket API" don't have. (But also have some bad points) Next time, let's check how to use the second, "Non-blocking" API.</p>

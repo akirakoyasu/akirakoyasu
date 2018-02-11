@@ -1,0 +1,183 @@
+---
+layout: post
+title: 'Re: Javaでのパターンマッチを考える'
+date: 2012-12-22 05:59:01.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Program
+- Java
+- Lambda
+- Pattern Match
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: Javaでパターンマッチを書く方法として、JavaSE8のLambdaを使ってみた例です。
+  _wpas_done_all: '1'
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501172323;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:797;}i:1;a:1:{s:2:"id";i:759;}i:2;a:1:{s:2:"id";i:45;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p><a href="https://twitter.com/kis">@kis</a> さんのエントリ「<a href="http://d.hatena.ne.jp/nowokay/20121221#1356065965">Javaでのパターンマッチを考える</a>」がとても興味深かったので、私も書いてみました。</p>
+<p>ユーティリティクラスを使って解決することにしたらどうでしょう？</p>
+<p>Scalaの記法をよく見て、なるべく似たような形になるようにクラス構造を考えました。<br />
+caseなどのキーワードに当たる部分はstaticメソッドで乗り切り、マッチした際に実行されるコードブロックはインナークラスを使って表現します。<!--more--></p>
+<pre>
+package patternmatch;
+
+import java.util.Arrays;
+
+public class PatternMatcher {
+    public static PatternMatcher subject(Object... objects) {
+        return new PatternMatcher(objects);
+    }
+
+    public static Case case_(Object... objects) {
+        return new Case(objects);
+    }
+    
+    public static final Case default_ = new Case() {
+        @Override
+        boolean matches(Object[] objects) {
+            return true;
+        }
+    };
+    
+    public static final WildCard _ = new WildCard();
+
+    private final Object[] objects;
+    
+    PatternMatcher(Object... objects) {
+        this.objects = objects;
+    }
+    
+    public void match(CaseBlock... caseBlocks) {
+        for (CaseBlock caseBlock : caseBlocks) {
+            Case c = caseBlock.getCase();
+            if (c.matches(objects)) {
+                caseBlock.getBlock().apply();
+                return;
+            }
+        }
+    }
+    
+    // コンパイル用（本来不要）
+    public void match(CaseBlock cb1, CaseBlock cb2,
+            CaseBlock cb3, CaseBlock cb4) {
+        match(new CaseBlock[]{cb1, cb2, cb3, cb4});
+    }
+    
+    public static class Case {
+        private final Object[] objects;
+        
+        Case(Object... objects) {
+            this.objects = objects;
+        }
+        
+        public CaseBlock exec(Block b) {
+            return new CaseBlock(this, b);
+        }
+        
+        boolean matches(Object[] objects) {
+            // ちょっと省略
+            return Arrays.equals(this.objects, objects);
+        }
+    }
+    
+    public static interface Block {
+        public void apply();
+    }
+    
+    static class CaseBlock {
+        private final Case c;
+        private final Block b;
+        
+        public CaseBlock(Case c, Block b){
+            this.c = c;
+            this.b = b;
+        }
+
+        public Case getCase() {
+            return c;
+        }
+
+        public Block getBlock() {
+            return b;
+        }
+    }
+    
+    static class WildCard {
+        @Override
+        public boolean equals(Object obj) {
+            return true;
+        }
+    }
+}
+</pre>
+<p>このPatternMatcherクラスを使ってFizzBuzzを書くとこうなります。</p>
+<pre>
+package patternmatch.use;
+
+import static java.lang.System.out;
+import static patternmatch.PatternMatcher.*;
+import patternmatch.PatternMatcher.Block;
+
+public class Test {
+    public static void main(String[] args) {
+        for (int i = 1; i <= 20; i++) {
+            final int j = i;
+            subject(j % 3, j % 5).match(
+                case_(0, 0).exec(new Block(){
+                    @Override
+                    public void apply() {
+                        out.println("fizzbuzz");
+                    }}),
+                case_(0, _).exec(new Block(){
+                    @Override
+                    public void apply() {
+                        out.println("fizz");
+                    }}),
+                case_(_, 0).exec(new Block(){
+                    @Override
+                    public void apply() {
+                        out.println("buzz");
+                    }}),
+                default_.exec(new Block(){
+                    @Override
+                    public void apply() {
+                        out.println(j);
+                    }})
+            );
+        }
+    }
+}
+</pre>
+<p>これではあまり嬉しくないのですが、JavaSE8のLambdaを使えば以下のように書けます。</p>
+<pre>
+package patternmatch.use;
+
+import static java.lang.System.out;
+import static patternmatch.PatternMatcher.*;
+
+public class Test2 {
+    public static void main(String[] args) {
+        for (int i = 1; i <= 20; i++) {
+            final int j = i;
+            subject(j % 3, j % 5).match(
+                case_(0, 0).exec(()-> out.println("fizzbuzz") ),
+                case_(0, _).exec(()-> out.println("fizz") ),
+                case_(_, 0).exec(()-> out.println("buzz") ),
+                default_.exec(()-> out.println(j) )
+            );
+        }
+    }
+}
+</pre>
+<p>おお、多少のムリヤリ感は拭えないまでも、Lambdaで書くとかなり記述量が減って良い感じですね！</p>
+<p>ちなみに、執筆時点で最新のOpenJDK with Lambda support (lambda-8-b69-macosx-x86_64-17_dec_2012) を使用してコンパイルしてみたところ、まだコンパイラにバグがあるようで、可変長引数メソッドを参照するとコンパイルが通りませんでした。</p>

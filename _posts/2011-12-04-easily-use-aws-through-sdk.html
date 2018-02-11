@@ -1,0 +1,187 @@
+---
+layout: post
+title: SDKで身近になるAmazon Web Service
+date: 2011-12-04 16:00:07.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- Database
+- Program
+- AWS
+- AWS SDK for Java
+- Java
+- S3
+- SDK
+- SES
+- SimpleDB
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: |-
+    AWS SDK for Javaを使って、Amazon S3・Amazon SimpleDB・Amazon SESを利用する方法を紹介します。
+    このエントリはJava Advent Calendar 2011 第4日目のエントリです。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501267768;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:759;}i:1;a:1:{s:2:"id";i:797;}i:2;a:1:{s:2:"id";i:135;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>このエントリは<a href="http://atnd.org/events/22434">Java Advent Calendar 2011</a> 第4日目のエントリです。<br />
+<a href="http://d.hatena.ne.jp/zephiransas/20111203/1322911676">« 第3日目のエントリ</a>・<a href="http://d.hatena.ne.jp/cero-t/20111205/1323104934">第5日目のエントリ »</a></p>
+<p>今日はAWSについて書こうと思います。というのは、最近ノーリスクとかマッシュアップとかいって、従量コストで利用できるWebモジュールの需要が（私の中で）高まってるからなのですが・・・。</p>
+<p>AWSと言えばEC2やS3が有名ですが、他にもいろいろなサービスが提供されています。今日はその中でもシンプルで、単体でも役立ちそうなサービスをJava用のSDKから使う方法について紹介します。</p>
+<ul>
+<li>Amazon Simple Storage Service (S3)</li>
+<li>Amazon SimpleDB</li>
+<li>Amazon Simple Email Service (SES)</li>
+</ul>
+<p>この全てのサービス名に"Simple"と付いているのは偶然です。これを基準に選んだわけではありません。本当です。</p>
+<p>なお記載のコードを実行するためには、AWSのアカウント登録と各サービスの有効化が必要です。また一応、従量課金サービスですので使い方によって料金が発生することがあります。<!--more--></p>
+<h3>AWS SDK for Java</h3>
+<p>AWSはRESTやSOAPで制御することができますが、SDKを通せばREST/SOAPのリクエスト・レスポンスの処理はSDKに任せて、Javaから手軽にサービスを利用できます。</p>
+<p>SDKを使用するには、AWSのページからダウンロードしてクラスパスに含めるか、あるいはmavenを使うならpom.xmlに以下のdependencyを追加します。</p>
+<pre>&lt;dependency&gt;
+	&lt;groupId&gt;com.amazonaws&lt;/groupId&gt;
+	&lt;artifactId&gt;aws-java-sdk&lt;/artifactId&gt;
+	&lt;version&gt;1.2.12&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<h3>認証</h3>
+<p>それぞれのサービスを利用するために、認証が必要になります。AWSのアカウント画面からアクセスキーIDとシークレットアクセスキーを確認してください。これは共通で使いますので、以下のように定数として定義しておきます。</p>
+<pre>public static final String AWS_ACCESSKEY_ID = "1234567890ABCDEFGHIJ";
+public static final String AWS_SECRET_ACCESSKEY
+    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn";</pre>
+<h3>Amazon Simple Storage Service (S3)</h3>
+<p>まずはご存知S3から使ってみることにします。S3は、キーに紐づくオブジェクトを格納できるストレージで、かなり大きなオブジェクトも格納できるのが特徴です。今は5テラバイトまで格納できるようです。</p>
+<p style="text-align: center;"><img class=" wp-image-263 aligncenter article" title="AWS_S3" alt="Amazon S3" src="{{ site.baseurl }}/assets/AWS_S3.png" width="512" height="300" /></p>
+<p>例としてXMLファイルを格納し、それをまた取り出してみましょう。バケット名はS3のサービス全体で一意でなければならないことに注意してください。</p>
+<pre>// 認証オブジェクト
+AWSCredentials credential
+	= new BasicAWSCredentials(AWS_ACCESSKEY_ID, AWS_SECRET_ACCESSKEY);
+
+// S3クライアントを作成
+AmazonS3Client client = new AmazonS3Client(credential);
+
+// S3でユニークなバケット名
+String bucketName = "xxxxxxxx";
+// バケットを作成
+client.createBucket(bucketName);
+
+// 格納
+client.putObject(bucketName, "indian teas", new File("/path/to/indianTeas.xml"));
+
+// 取り出し
+S3Object s3Object = client.getObject(bucketName, "indian teas");
+
+// 標準出力へ出力
+InputStream is = s3Object.getObjectContent();
+ReadableByteChannel from = Channels.newChannel(is);
+WritableByteChannel to = Channels.newChannel(System.out);
+try {
+	ByteBuffer buf = ByteBuffer.allocate(0x1000);
+	while (from.read(buf) != -1) {
+		buf.flip();
+		while (buf.hasRemaining()) {
+			to.write(buf);
+		}
+		buf.clear();
+	}
+} catch (IOException e) {
+	e.printStackTrace();
+}
+
+// 削除
+client.deleteObject(bucketName, "indian teas");
+
+// バケットを削除
+client.deleteBucket(bucketName);
+
+client.shutdown();</pre>
+<p>このコードを実行すると、わらわらとAmazonHttpClientのログが出力された後、取り出したXMLの内容が出力されます。</p>
+<h3>Amazon SimpleDB</h3>
+<p>次はSimpleDBに挑戦してみましょう。SimpleDBは、複数の属性（カラムに当たります）を持つデータセット（レコード）を格納できるデータベースです。スキーマ定義は不要で、各データセットの属性を自由に設定できます。</p>
+<p style="text-align: center;"><img class="aligncenter  wp-image-264 article" title="AWS_SimpleDB" alt="Amazon SimpleDB" src="{{ site.baseurl }}/assets/AWS_SimpleDB.png" width="512" height="300" /></p>
+<p>以下のコードは簡単なデータ操作を行うものです。</p>
+<pre>// 認証オブジェクト
+AWSCredentials credential
+	= new BasicAWSCredentials(AWS_ACCESSKEY_ID, AWS_SECRET_ACCESSKEY);
+
+// SimpleDBクライアントを作成
+AmazonSimpleDBClient client = new AmazonSimpleDBClient(credential);
+
+// DBドメイン名
+String domain = "testDomain";
+// ドメインの作成
+client.createDomain(new CreateDomainRequest(domain));
+
+// 属性の異なるデータセットを挿入
+client.putAttributes(new PutAttributesRequest()
+	.withDomainName(domain)
+	.withItemName("Darjeeling")
+	.withAttributes(
+		new ReplaceableAttribute("country", "India", Boolean.FALSE),
+		new ReplaceableAttribute("area", "north-east", Boolean.FALSE)));
+
+client.putAttributes(new PutAttributesRequest()
+	.withDomainName(domain)
+	.withItemName("Uva")
+	.withAttributes(
+		new ReplaceableAttribute("country", "Sri Lanka", Boolean.FALSE),
+		new ReplaceableAttribute("island", "Ceylon", Boolean.FALSE),
+		new ReplaceableAttribute("area", "south-east", Boolean.FALSE)));
+
+// 参照（非SQL）
+SelectResult result = client.select(new SelectRequest("select * from testDomain"));
+
+// データセットを表示
+List&lt;Item&gt; items = result.getItems();
+for (Item item : items) {
+	System.out.printf("%s:", item.getName());
+	for (Attribute attr : item.getAttributes()) {
+		System.out.printf(" %s=%s,", attr.getName(), attr.getValue());
+	}
+	System.out.println();
+}
+
+// DBドメインを削除
+client.deleteDomain(new DeleteDomainRequest(domain));
+
+client.shutdown();</pre>
+<p>参照するときの非SQLというのが気になりますね。これはSQLを簡略化したような構文で参照条件を記述するものなのですが、詳しくはAWSのドキュメントをご覧ください。"Amazon SimpleDB Quick Reference Card"で検索すればチートシートが見つかると思います。</p>
+<p>さて上記のコードを実行すると、運が良ければ以下の出力が得られます。（ログは除いています）</p>
+<pre class="output">Darjeeling: area=north-east, country=India,
+Uva: area=south-east, country=Sri Lanka, island=Ceylon,</pre>
+<p>たまに入れたものが全部出てこないこともあります。これはconsistency、いわゆる読み取り一貫性がオプション扱いになっているからです。SelectRequestオブジェクトのconsistentReadをtrueにすれば、参照前に挿入した全てのデータセットを参照できるようになります。</p>
+<h3>Amazon Simple Email Service (SES)</h3>
+<p>SESを使うと簡単にメールを送信できます。これには１つ準備が必要になります。AWS管理コンソールのSES画面から、送信者のメールアドレス認証を行っておいてください。同じ画面にProduction Accessの申し込みボタンがありますが、テストだけならそちらの方は必要ありません。</p>
+<p>認証を済ませたら、早速送信してみましょう。送信者と受信者には認証したメールアドレスを設定します。</p>
+<pre>// 認証オブジェクト
+AWSCredentials credential
+	= new BasicAWSCredentials(AWS_ACCESSKEY_ID, AWS_SECRET_ACCESSKEY);
+
+// SESクライアントを作成
+AmazonSimpleEmailServiceClient client
+	= new AmazonSimpleEmailServiceClient(credential);
+
+// 管理コンソールで認証済みのアドレス
+String verifiedAddress = "mail@example.com";
+
+// メール送信
+client.sendEmail(new SendEmailRequest()
+	.withSource(verifiedAddress)
+	.withDestination(new Destination()
+		.withToAddresses(verifiedAddress))
+	.withMessage(new Message()
+		.withSubject(new Content("AWS Simple Email test"))
+		.withBody(new Body()
+			.withText(new Content("AWS SESのテストです。"))
+			.withHtml(new Content("&lt;h1&gt;AWS SES&lt;/h1&gt;&lt;p&gt;テストです。&lt;/p&gt;")))));
+
+client.shutdown();</pre>
+<p>これでしばらく待つと、メールが届くはずです。</p>
+<h3>今から使えるAWS</h3>
+<p>AWSにはTomcat互換のアプリケーションコンテナ、Elastic Beanstalkというサービスもあります。そこから今回のS3・SimpleDB・SESを利用すれば、簡単にいろいろなWebサービスを構築できそうですね。</p>
+<p>余談ですが、AWSで頻繁に使われる３文字略語はどうも苦手です。全然覚えられません・・・。</p>

@@ -1,0 +1,144 @@
+---
+layout: post
+title: HTTPクライアントとして使うjersey-client
+date: 2012-02-05 05:12:32.000000000 -06:00
+type: post
+published: true
+status: publish
+categories: []
+tags:
+- JAX-RSのリファレンス実装、Jerseyの使い方
+- Program
+- HTTP Client
+- Java
+- JAX-RS
+- Jersey
+meta:
+  _edit_last: '1'
+  _revision-control: a:1:{i:0;s:8:"defaults";}
+  _aioseop_description: JAX-RSのリファレンス実装であるJerseyのクライアントライブラリ、jersey-client。RESTクライアントとしてだけではなく、HTTPクライアントとしても有用です。HTTPクライアントとしてjersey-clientを使う方法をコード例と共に紹介します。
+  _jetpack_related_posts_cache: a:1:{s:32:"1b5750fe692143898c8244009847a17d";a:2:{s:7:"expires";i:1501239930;s:7:"payload";a:3:{i:0;a:1:{s:2:"id";i:32;}i:1;a:1:{s:2:"id";i:79;}i:2;a:1:{s:2:"id";i:899;}}}}
+author:
+  login: akirakoyasu
+  email: mail@akirakoyasu.net
+  display_name: Akira Koyasu
+  first_name: ''
+  last_name: ''
+---
+<p>JAX-RSのリファレンス実装であるJerseyには、RESTサービスを提供するサーバ側の実装（jersey-server）と、RESTサービスを利用するクライアント側の実装（jersey-client）とがあります。</p>
+<p>RESTサービスではHTTPを介してサーバとクライアントとがやりとりしますから、当然jersey-clientはHTTPクライアントの機能を備えています。今回はJerseyの使い方の番外編として、RESTサービスを抜きにHTTPクライアントとしても、jersey-clientは使い勝手が良いという話をします。</p>
+<p>ちなみに、JAX-RS 1.1にはクライアント側のAPIは定義されておらず、今年（2012年）のQ2にリリース予定のJAX-RS 2.0から定義されることになっています。（本稿執筆時点ではEarly Draft Reviewの段階）</p>
+<h3>まず使ってみる</h3>
+<p>何はともあれ、使ってみましょう。</p>
+<p>Mavenを使用する場合は、以下のdependencyを追加します。</p>
+<pre>&lt;dependency&gt;
+	&lt;groupId&gt;com.sun.jersey&lt;/groupId&gt;
+	&lt;artifactId&gt;jersey-client&lt;/artifactId&gt;
+	&lt;version&gt;1.11&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+<p>あるいは、<a title="jersey.java.net" href="http://jersey.java.net/">http://jersey.java.net/</a>からjarをダウンロードしてクラスパスに含めます。</p>
+<p>まずは簡単なところで、あるサイトのHTMLを取得したいとしましょう。その場合以下のようなコードになります。</p>
+<pre>Client c = Client.create();
+WebResource r = c.resource("http://www.example.com/");
+String html = r.get(String.class);</pre>
+<p>これだけです。説明も不要なくらいごく簡潔ですね。<img class="alignright  wp-image-414 article" title="ClientとWebResource" alt="ClientとWebResource" src="{{ site.baseurl }}/assets/jersey-client_1.png" width="435" height="384" /></p>
+<ol>
+<li>Clientインスタンスを作る</li>
+<li>URLからWebResourceインスタンスを作る</li>
+<li>リクエストの結果をオブジェクトとして取得する</li>
+</ol>
+<p>基本的にはこの３ステップで進んでいきます。<!--more--></p>
+<h3>Clientの設定</h3>
+<p>先のコードのように、これはこれで手軽に書けて良いのですが、実際的にはクライアントにいくつかの設定をしたいことが多いでしょう。</p>
+<p>タイムアウトとリダイレクトの追跡を設定するには、次のようにします。</p>
+<pre>Client c = Client.create();
+c.setConnectTimeout(3*1000);
+c.setReadTimeout(5*1000);
+c.setFollowRedirects(Boolean.TRUE);</pre>
+<p>Basic認証を設定するには、次のようにします。</p>
+<pre>c.addFilter(new HTTPBasicAuthFilter("user", "passwd"));</pre>
+<h3>WebResourceの加工</h3>
+<p>個々のリクエストに関する変更はWebResourceを使って行います。以下のコードがどのような結果になるか見てみましょう。</p>
+<pre>WebResource r = c.resource("http://www.example.com/");
+WebResource r2 = r
+	.path("search")
+	.queryParam("key", "value");
+
+System.out.printf("r : %s%n", r);
+System.out.printf("r2: %s%n", r2);</pre>
+<pre class="output">r : http://www.example.com/
+r2: http://www.example.com/search?key=value</pre>
+<p>このように、WebResourceの持つメソッドの多くはそのインスタンス自身を変更せず、変更を加えた新しいWebResourceインスタンス・あるいはWebResource.Builderインスタンスを生成して返します。</p>
+<p>いくつかの変更・設定を行う例です。</p>
+<pre>WebResource.Builder b = c.resource("http://www.example.com/")
+	.path("search")
+	.queryParam("key", "value")
+	.cookie(new Cookie("name", "value"))
+	.accept(MediaType.TEXT_HTML_TYPE)
+	.header("name","value");</pre>
+<h3>レスポンスをオブジェクトとして取得</h3>
+<p>HTTPリクエストを行ったら、レスポンスを受け取ります。get()メソッドに渡すクラスによって、レスポンスをどのクラスのオブジェクトに変換して取得するかを指定します。とは言え、さすがに任意のクラスに変換できるというわけではなく、JAX-RSで変換が定義されているクラスと、Jerseyで独自に変換が提供されているクラスに限られます。</p>
+<p>以下のクラスが使用可能です。</p>
+<ul>
+<li>byte[]</li>
+<li>String</li>
+<li>java.io.InputStream</li>
+<li>java.io.Reader</li>
+<li>java.io.File</li>
+<li>javax.xml.transform.Source （vaildなxhtmlの場合など）</li>
+<li>org.w3c.dom.Document （vaildなxhtmlの場合など）</li>
+<li>java.awt.image.RenderedImage （画像の場合）</li>
+</ul>
+<p>またget()メソッドはHTTPのGETメソッドに対応しており、同様にPOST・PUT・DELETE・HEAD・OPTIONSメソッドそれぞれにも対応するメソッドが用意されています。</p>
+<p>ここまでをまとめると、以下のようなコードになります。</p>
+<pre>Client c = Client.create();
+c.setConnectTimeout(3*1000);
+c.setReadTimeout(5*1000);
+c.setFollowRedirects(Boolean.TRUE);
+c.addFilter(new HTTPBasicAuthFilter("user", "passwd"));
+
+String html = c.resource("http://www.example.com/")
+	.path("search")
+	.queryParam("key", "value")
+	.cookie(new Cookie("name", "value"))
+	.accept(MediaType.TEXT_HTML_TYPE)
+	.header("name","value")
+	.get(String.class);</pre>
+<h3>ClientFilter</h3>
+<p>jersey-clientの特徴として、フィルターによるカスタマイズがあります。プログラミングモデルとしてはServletFilterに近いイメージですね。この仕組みがコンパクトなAPIに柔軟性を与えていて、個人的に気に入っているポイントでもあります。</p>
+<p style="text-align: center;"><img class="aligncenter  wp-image-419 article" title="ClientFilterのチェーン" alt="ClientFilterのチェーン" src="{{ site.baseurl }}/assets/jersey-client_2.png" width="723" height="198" /></p>
+<p>Clientクラス・WebResourceクラスともにFilterableインターフェイスを実装しており、各々にフィルタを適用できます。具体的にはClientFilterを拡張したクラスを作成し、handle()メソッドを実装します。<br />
+※先ほどBasic認証の設定で使ったHTTPBasicAuthFilterは、予め用意されているClientFilterの拡張クラスです。</p>
+<pre>Filterable#addFilter(new ClientFilter() {
+	@Override
+	public ClientResponse handle(ClientRequest cr)
+			throws ClientHandlerException {
+
+		doSome(cr);		// リクエストに対して何かをする
+
+		// 次のフィルタへ処理を渡す
+		ClientResponse res = getNext().handle(cr);
+
+		doOther(res);		// レスポンスに対して何かをする
+
+		return res;
+	}
+});</pre>
+<p>例えばClientにユーザエージェントを設定する場合には、次のようにします。</p>
+<pre>Client c = Client.create();
+c.addFilter(new ClientFilter() {
+	@Override
+	public ClientResponse handle(ClientRequest cr)
+			throws ClientHandlerException {
+		if (!cr.getHeaders().containsKey(HttpHeaders.USER_AGENT)) {
+			cr.getHeaders().add(
+				HttpHeaders.USER_AGENT,
+				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:9.0.1)"
+						+ " Gecko/20100101 Firefox/9.0.1");
+		}
+		return getNext().handle(cr);
+	}
+});</pre>
+<p>共通的なHTTPヘッダを設定するというシーンは割とよくあると思うのですが、それ用の拡張クラスは用意されていません。</p>
+<h3>HTTPクライアントとしてのjersey-client</h3>
+<p>元はRESTサービスのクライアントとして開発されたjersey-clientではありますが、HTTPクライアントとして見ても実用に耐えるものです。そして最近のシステムでは、"Web上にある何かを取ってくる"という機能も当たり前になりました。それを速く・分かりやすく・かつ柔軟に実装したいとき、jersey-clientはとても有用だと思います。</p>
