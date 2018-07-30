@@ -23,7 +23,7 @@ twitter_username: akirakoyasu
 github_username:  akirakoyasu
 
 timezone: Asia/Tokyo
-google_analytics: UA-15457791-6
+google_analytics: UA-15457791-2
 
 excerpt_separator: <!--more-->
 paginate: 5
@@ -38,6 +38,7 @@ gems:
 
 # Exclude from processing.
 exclude:
+  - Dockerfile
   - docker-compose.yml
   - Gemfile
   - Gemfile.lock
